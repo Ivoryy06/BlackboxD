@@ -1,5 +1,3 @@
-> Record your activity that doesn't eat your performance.
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🌟 Overview
