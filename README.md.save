@@ -81,6 +81,25 @@ go build -o blackboxd-api
 cd rust-exporter
 cargo build --release
 
+# Start the daemon
+blackboxd start
+```
+
+## 🎮 Usage
+
+### Starting the Daemon
+
+```bash
+# Start BlackboxD daemon
+blackboxd start
+
+# Check status
+blackboxd status
+
+# Stop daemon
+blackboxd stop
+```
+
 ### Viewing Activity
 
 ```bash
@@ -96,7 +115,7 @@ blackboxd stats
 
 ### Configuration
 
-Edit `~/.config/blackboxd/config.yaml` to customize:
+Edit `~/.config/blackboxd/config.toml` to customize:
 
 ```yaml
 # Sample configuration
@@ -182,6 +201,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<p align=\"center\">Made by Ivory /p>
+<p align=\"center\">Made with ❤️ by Ivyy</p>
 "
 Observation: Overwrite successful: /app/README.md

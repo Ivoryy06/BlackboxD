@@ -21,7 +21,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 
 check_dependencies() {
     local missing=()
-    for cmd in go git hyprctl; do
+    for cmd in go git; do
         command -v "$cmd" &>/dev/null || missing+=("$cmd")
     done
     
@@ -102,6 +102,8 @@ EOF
 
 uninstall_blackboxd() {
     log_info "Uninstalling BlackboxD..."
+
+    [[ -z "$INSTALL_DIR" ]] && { log_error "INSTALL_DIR is empty, aborting"; exit 1; }
     
     systemctl --user stop "$APP_NAME.service" 2>/dev/null || true
     systemctl --user disable "$APP_NAME.service" 2>/dev/null || true
@@ -110,6 +112,7 @@ uninstall_blackboxd() {
     rm -f "$BIN_DIR/$APP_NAME"
     rm -f "$BIN_DIR/blackboxd-listener.lua"
     rm -rf "$INSTALL_DIR"
+    
     
     systemctl --user daemon-reload
     

@@ -205,3 +205,14 @@ def _configure_logging(log_path: Path) -> None:
 def _getpid() -> int:
     import os
     return os.getpid()
+
+import os
+
+def _write_pid():
+    pid_dir = Path(f"/run/user/{os.getuid()}")
+    pid_file = pid_dir / "blackboxd.pid"
+    pid_file.write_text(str(os.getpid()))
+    return pid_file
+
+def _clear_pid(pid_file):
+    pid_file.unlink(missing_ok=True)
