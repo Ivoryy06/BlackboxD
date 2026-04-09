@@ -113,6 +113,8 @@ class Config:
             return cls()
 
         raw = _read_toml(resolved)
+        if raw is None:
+            return cls() 
         return _parse(raw, resolved)
 
 
@@ -131,12 +133,12 @@ def _find_config_file() -> Path | None:
     return None
 
 
-def _read_toml(path: Path) -> dict[str, Any]:
+def _read_toml(path: Path) -> dict | None:
     try:
         with open(path, "rb") as fh:
             return tomllib.load(fh)
     except FileNotFoundError:
-        raise FileNotFoundError(f"Config file not found: {path}")
+        return None  # ← was: raise
     except tomllib.TOMLDecodeError as exc:
         raise ValueError(f"Invalid TOML in {path}: {exc}") from exc
 

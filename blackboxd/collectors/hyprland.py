@@ -22,7 +22,7 @@ import time
 from typing import Any
 
 from blackboxd.collectors.base import BaseCollector, WindowInfo
-from blackboxd.config.config import CollectorConfig
+from blackboxd.config import CollectorConfig
 
 log = logging.getLogger(__name__)
 

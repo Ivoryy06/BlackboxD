@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator
 
-from blackboxd.config.config import CollectorConfig
+from blackboxd.config import CollectorConfig
 from blackboxd.models import Event, EventKind, RawEvent
 
 log = logging.getLogger(__name__)

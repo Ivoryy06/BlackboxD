@@ -22,7 +22,7 @@ from pathlib import Path
 def main() -> None:
     import argparse
 
-    from blackboxd.config.config import Config
+    from blackboxd.config import Config
     from blackboxd.storage.engine import StorageEngine
     from blackboxd.timeline.reconstructor import Reconstructor
     from blackboxd.timeline.renderer import TextRenderer

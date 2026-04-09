@@ -1,0 +1,9 @@
+
+[:python_version < "3.11"]
+tomllib
+
+[dev]
+pytest>=7.4
+pytest-cov
+ruff
+mypy

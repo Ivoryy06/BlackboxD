@@ -27,7 +27,7 @@ from types import FrameType
 
 from blackboxd.collectors.base import Normalizer
 from blackboxd.collectors.registry import get_collector
-from blackboxd.config.config import Config
+from blackboxd.config import Config
 from blackboxd.models import Event, EventKind, RawEvent
 from blackboxd.storage.engine import StorageEngine
 

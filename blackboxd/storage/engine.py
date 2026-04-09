@@ -91,23 +91,20 @@ class StorageEngine:
         self._conn = sqlite3.connect(
             self._path,
             check_same_thread=False,
-            isolation_level=None,  # autocommit; we manage transactions manually
+            isolation_level=None,
         )
         self._conn.row_factory = sqlite3.Row
 
-        with self._tx() as cur:
-            # Performance / safety pragmas
-            cur.execute("PRAGMA journal_mode = WAL;")
-            cur.execute("PRAGMA synchronous = NORMAL;")
-            cur.execute("PRAGMA foreign_keys = ON;")
-            cur.execute("PRAGMA cache_size = -8000;")  # 8 MB page cache
+        self._conn.execute("PRAGMA journal_mode = WAL;")
+        self._conn.execute("PRAGMA synchronous = NORMAL;")
+        self._conn.execute("PRAGMA foreign_keys = ON;")
+        self._conn.execute("PRAGMA cache_size = -8000;")
 
-            # Schema
+        with self._tx() as cur:
             cur.execute(CREATE_META)
             cur.execute(CREATE_EVENTS)
             for idx in CREATE_INDEXES:
                 cur.execute(idx)
-
             self._migrate(cur)
 
         log.info("Storage opened: %s", self._path)

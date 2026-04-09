@@ -13,7 +13,7 @@ import time
 from collections.abc import Iterator
 
 from blackboxd.collectors.base import BaseCollector, WindowInfo
-from blackboxd.config.config import CollectorConfig
+from blackboxd.config import CollectorConfig
 from blackboxd.models import RawEvent
 
 

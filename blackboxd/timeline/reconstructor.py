@@ -24,7 +24,7 @@ import datetime
 import logging
 from typing import Sequence
 
-from blackboxd.config.config import TimelineConfig
+from blackboxd.config import TimelineConfig
 from blackboxd.models import Event, EventKind, FocusQuality, Session, TimelineDay
 
 log = logging.getLogger(__name__)
