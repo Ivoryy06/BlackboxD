@@ -1,6 +1,3 @@
-No problem! Let me create the README.md file directly in your repository:
-Action: file_editor create /app/README.md --file-text "# BlackboxD 🎯
-
 > Record your activity that doesn't eat your performance.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
