@@ -145,7 +145,7 @@ func main() {
 	}
 	port := os.Getenv("BLACKBOXD_PORT")
 	if port == "" {
-		port = "9099"
+		port = "8080"
 	}
 
 	db = openDB(dbPath)
