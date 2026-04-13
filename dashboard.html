@@ -646,43 +646,264 @@
 </div><!-- /frame -->
 
 <script>
-// ── Mock data ──────────────────────────────────────────────────────────────
+/* BLACKBOXD_INLINE_DATA — replaced by `blackboxd dashboard --export` */
+const INLINE_DATA = null;
 
-const TODAY = new Date();
-const BASE  = new Date(TODAY);
-BASE.setHours(8, 32, 0, 0);
-const BASE_TS = BASE.getTime() / 1000;
+const API = 'http://localhost:9099';
+let allEvents = [], activeFilter = 'all', viewDate = null;
 
-// Sessions: [offset_s, app, app_class, title, duration_s, focus]
-const SESSIONS = [
-  [0,    'Terminal',  'kitty',    'vim blackboxd/models.py',              1820, 'deep'],
-  [1820, 'Firefox',   'firefox',  'GitHub — blackboxd · PR #4',            420, 'shallow'],
-  [2240, 'Terminal',  'kitty',    'pytest tests/ -v --tb=short',           980, 'sustained'],
-  [null, null, null, null, 480, 'idle'],   // idle gap
-  [3700, 'Slack',     'slack',    '# engineering — 3 new messages',        240, 'glance'],
-  [3940, 'Terminal',  'kitty',    'vim blackboxd/storage/engine.py',      2100, 'deep'],
-  [6040, 'Firefox',   'firefox',  'SQLite WAL mode — official docs',       680, 'sustained'],
-  [6720, 'Obsidian',  'obsidian', 'Daily notes — 2026-04-09',              540, 'sustained'],
-  [null, null, null, null, 720, 'idle'],
-  [7980, 'Firefox',   'firefox',  'Hacker News',                           310, 'shallow'],
-  [8290, 'Terminal',  'kitty',    'git diff HEAD~1 | less',                820, 'sustained'],
-  [9110, 'Zed',       'zed',      'blackboxd/collectors/hyprland.py',     1650, 'deep'],
-  [null, null, null, null, 300, 'idle'],
-  [11060,'Firefox',   'firefox',  'Python 3.11 tomllib docs',              260, 'shallow'],
-  [11320,'Terminal',  'kitty',    'blackboxd --backend mock --verbose',    480, 'shallow'],
-  [11800,'Zed',       'zed',      'blackboxd/timeline/reconstructor.py',  1920, 'deep'],
-];
+// ── Utilities ──────────────────────────────────────────────────────────────
 
-// App totals (seconds)
-const APP_TOTALS = [
-  ['Terminal',  6100],
-  ['Zed',       3570],
-  ['Firefox',   1670],
-  ['Obsidian',   540],
-  ['Slack',      240],
-];
+function fmtTime(ts) {
+  const d = new Date(ts * 1000);
+  return d.toTimeString().slice(0, 8);
+}
+function fmtDur(s) {
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60), h = Math.floor(m / 60);
+  return h ? `${h}h ${m % 60}m` : `${m}m`;
+}
+function fmtHM(s) {
+  const m = Math.floor(s / 60);
+  return `${Math.floor(m/60)}:${String(m%60).padStart(2,'0')}`;
+}
+function focusTag(dur) {
+  if (dur >= 1500) return 'deep';
+  if (dur >= 300)  return 'sustained';
+  if (dur >= 60)   return 'shallow';
+  return 'glance';
+}
+function dayBounds(date) {
+  const d = date ? new Date(date) : new Date();
+  d.setHours(0,0,0,0);
+  return [d.getTime()/1000, d.getTime()/1000 + 86400];
+}
 
-// Log lines
-const LOG_LINES = [
-  ['08:32:00', 'window_focus',    'focus',  'kitty — vim blackboxd/models.py'],
-  ['08:32:01', 'window_focus',    'focus',  'kitt
+// ── Fetch & process ────────────────────────────────────────────────────────
+
+async function loadData(date) {
+  if (INLINE_DATA) {
+    const [since, until] = dayBounds(date);
+    allEvents = INLINE_DATA.events.filter(e => e.timestamp >= since && e.timestamp < until);
+    return INLINE_DATA.stats;
+  }
+  const [since, until] = dayBounds(date);
+  const [evRes, statsRes] = await Promise.all([
+    fetch(`${API}/api/events?since=${since}&until=${until}&limit=2000`),
+    fetch(`${API}/api/stats`)
+  ]);
+  if (!evRes.ok) throw new Error(evRes.status);
+  allEvents = await evRes.json();
+  const stats = await statsRes.json();
+  return stats;
+}
+
+function buildSessions(events) {
+  const sessions = [];
+  let prev = null;
+  for (const e of events) {
+    if (e.kind !== 'window_focus') continue;
+    if (prev) {
+      prev.duration = e.timestamp - prev.ts;
+      prev.focus = focusTag(prev.duration);
+      sessions.push(prev);
+    }
+    prev = { ts: e.timestamp, app: e.app_name || '?', cls: e.app_class || '', title: e.window_title || '', duration: 0, focus: 'glance' };
+  }
+  if (prev) { prev.duration = 60; prev.focus = focusTag(prev.duration); sessions.push(prev); }
+  return sessions;
+}
+
+function computeStats(sessions, events) {
+  let active = 0, idle = 0, deep = 0, shallow = 0;
+  for (const s of sessions) {
+    if (s.focus === 'deep') deep++;
+    if (s.focus === 'shallow') shallow++;
+    active += s.duration;
+  }
+  for (const e of events) {
+    if (e.kind === 'idle' && e.idle_seconds) idle += e.idle_seconds;
+  }
+  const switches = sessions.length;
+  return { active, idle, deep, shallow, switches, total: events.length };
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+
+function renderTimeline(sessions) {
+  const container = document.getElementById('timeline-rows');
+  const header = container.querySelector('.tl-row.header');
+  container.innerHTML = '';
+  container.appendChild(header);
+
+  const maxDur = Math.max(...sessions.map(s => s.duration), 1);
+  let prevTs = null;
+
+  for (const s of sessions) {
+    if (activeFilter !== 'all' && s.focus !== activeFilter && !(activeFilter === 'idle')) continue;
+
+    // idle gap
+    if (prevTs !== null && s.ts - prevTs > 300) {
+      const gap = document.createElement('div');
+      gap.className = 'tl-row idle-gap';
+      gap.innerHTML = `<div class="tl-cell" style="grid-column:1/-1">⏸ idle — ${fmtDur(s.ts - prevTs)}</div>`;
+      container.appendChild(gap);
+    }
+    prevTs = s.ts + s.duration;
+
+    const pct = Math.round((s.duration / maxDur) * 100);
+    const barClass = s.focus === 'deep' ? 'deep' : s.focus === 'shallow' ? 'shallow' : s.focus === 'glance' ? 'glance' : '';
+    const row = document.createElement('div');
+    row.className = 'tl-row';
+    row.dataset.focus = s.focus;
+    row.innerHTML = `
+      <div class="tl-cell tl-time">${fmtTime(s.ts)}</div>
+      <div class="tl-cell tl-app">${s.app}</div>
+      <div class="tl-cell tl-title">${s.title}</div>
+      <div class="tl-cell tl-dur">${fmtDur(s.duration)}</div>
+      <div class="tl-bar-wrap"><div class="tl-bar ${barClass}" style="width:${pct}%"></div><span class="focus-tag ${s.focus}">${s.focus}</span></div>`;
+    container.appendChild(row);
+  }
+}
+
+function renderApps(sessions) {
+  const totals = {};
+  for (const s of sessions) totals[s.app] = (totals[s.app] || 0) + s.duration;
+  const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+  const max = sorted[0]?.[1] || 1;
+  const container = document.getElementById('app-list-rows');
+  container.innerHTML = sorted.map(([app, dur]) => `
+    <div class="app-row">
+      <div class="app-name">${app}</div>
+      <div class="app-bar-track"><div class="app-bar-fill" style="width:${Math.round(dur/max*100)}%"></div></div>
+      <div class="app-time">${fmtDur(dur)}</div>
+    </div>`).join('');
+  document.querySelector('.nav-item:nth-child(2) .nav-badge').textContent = sorted.length;
+}
+
+function renderHeatmap(events) {
+  const grid = document.getElementById('heatmap-grid');
+  const hourLabels = document.getElementById('hm-hour-labels');
+  const days = 7;
+  const now = new Date(); now.setHours(0,0,0,0);
+
+  // build hour labels
+  hourLabels.innerHTML = Array.from({length:24},(_,i)=>
+    `<span>${i%6===0?String(i).padStart(2,'0'):''}</span>`).join('');
+
+  // bucket events by day+hour
+  const buckets = {};
+  for (const e of events) {
+    if (e.kind !== 'window_focus') continue;
+    const d = new Date(e.timestamp * 1000);
+    const dayOff = Math.floor((now - new Date(d.getFullYear(),d.getMonth(),d.getDate())) / 86400000);
+    if (dayOff < 0 || dayOff >= days) continue;
+    const key = `${dayOff}:${d.getHours()}`;
+    buckets[key] = (buckets[key] || 0) + 1;
+  }
+
+  // fetch 7 days of events for heatmap
+  const maxVal = Math.max(...Object.values(buckets), 1);
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  grid.innerHTML = '';
+  for (let d = days-1; d >= 0; d--) {
+    const date = new Date(now); date.setDate(date.getDate() - d);
+    const row = document.createElement('div'); row.className = 'heatmap-row';
+    row.innerHTML = `<div class="heatmap-label">${dayNames[date.getDay()]}</div><div class="heatmap-cells">${
+      Array.from({length:24},(_,h) => {
+        const v = buckets[`${d}:${h}`] || 0;
+        const lvl = v === 0 ? '' : v < maxVal*0.33 ? 'l1' : v < maxVal*0.66 ? 'l2' : 'l3';
+        return `<div class="hm-cell ${lvl}" data-tip="${date.toDateString()} ${String(h).padStart(2,'0')}:00 — ${v} events"></div>`;
+      }).join('')
+    }</div>`;
+    grid.appendChild(row);
+  }
+}
+
+function renderLog(events) {
+  const view = document.getElementById('log-view');
+  const kindClass = { window_focus:'focus', idle:'idle', workspace_switch:'switch' };
+  view.innerHTML = [...events].reverse().slice(0, 300).map(e => {
+    const cls = kindClass[e.kind] || 'daemon';
+    const body = e.app_name ? `${e.app_name} — ${e.window_title||''}` : e.kind;
+    return `<div class="log-line"><span class="log-ts">${fmtTime(e.timestamp)}</span><span class="log-kind ${cls}">${e.kind}</span><span class="log-body">${body}</span></div>`;
+  }).join('');
+  document.querySelector('#s-log .panel-subtitle').textContent = `${events.length} events today`;
+  document.querySelector('.nav-item:nth-child(4) .nav-badge').textContent = events.length;
+}
+
+function renderSidebar(st) {
+  const rows = document.querySelectorAll('#main-panel ~ * .stat-row .sv, .sidebar .stat-row .sv');
+  // update sidebar stats
+  const sb = document.querySelector('.sidebar');
+  const statVals = sb.querySelectorAll('.stat-row');
+  const map = { active: fmtHM(st.active), idle: fmtHM(st.idle), switches: st.switches, deep: st.deep, shallow: st.shallow, events: st.total };
+  statVals.forEach(row => {
+    const key = row.querySelector('.sk')?.textContent?.trim();
+    if (key && map[key] !== undefined) row.querySelector('.sv').textContent = map[key];
+  });
+  document.getElementById('sb-event-count').textContent = `${st.total} events`;
+}
+
+function renderStatsBar(st) {
+  const cells = document.querySelectorAll('.stat-cell');
+  if (cells[0]) cells[0].querySelector('.value').textContent = fmtHM(st.active);
+  if (cells[1]) cells[1].querySelector('.value').textContent = st.deep;
+  if (cells[2]) cells[2].querySelector('.value').textContent = st.switches;
+  if (cells[3]) cells[3].querySelector('.value').textContent = fmtHM(st.idle);
+}
+
+// ── Main render pipeline ───────────────────────────────────────────────────
+
+async function refresh(date) {
+  const statusDot = document.querySelector('.statusbar .dot');
+  try {
+    await loadData(date);
+    const sessions = buildSessions(allEvents);
+    const st = computeStats(sessions, allEvents);
+    renderTimeline(sessions);
+    renderApps(sessions);
+    renderHeatmap(allEvents);
+    renderLog(allEvents);
+    renderSidebar(st);
+    renderStatsBar(st);
+    const d = date ? new Date(date) : new Date();
+    document.getElementById('tl-date-label').textContent = d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    document.getElementById('sb-date').textContent = date ? d.toLocaleDateString() : 'today';
+    if (statusDot) statusDot.style.background = 'var(--green)';
+  } catch(err) {
+    if (statusDot) statusDot.style.background = 'var(--red)';
+    document.querySelector('.statusbar').title = 'API unreachable: ' + err.message;
+    console.warn('blackboxd-api unreachable:', err.message);
+  }
+}
+
+// ── UI controls ────────────────────────────────────────────────────────────
+
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('s-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.panel-controls .btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTimeline(buildSessions(allEvents));
+}
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+
+setInterval(() => {
+  document.getElementById('live-time').textContent = new Date().toTimeString().slice(0,8);
+}, 1000);
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+
+refresh(null);
+if (!INLINE_DATA) setInterval(() => refresh(viewDate), 30000);
+</script>
+</body>
+</html>
