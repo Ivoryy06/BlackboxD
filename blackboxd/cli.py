@@ -22,7 +22,70 @@ import sys
 from pathlib import Path
 
 
-def _export_dashboard(engine, output: Path | None) -> None:
+def _serve_dashboard(engine, port: int) -> None:
+    """Serve the dashboard with a live /data endpoint backed by SQLite."""
+    import dataclasses
+    import urllib.parse
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    here = Path(__file__).parent.parent
+    template = here / "dashboard.html"
+
+    def _serial(e):
+        d = dataclasses.asdict(e)
+        d["kind"] = e.kind.value
+        return d
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_): pass  # silence request logs
+
+        def _json(self, data):
+            body = json.dumps(data).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", len(body))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            parsed = urllib.parse.urlparse(self.path)
+            qs = urllib.parse.parse_qs(parsed.query)
+
+            if parsed.path == "/data":
+                since = float(qs["since"][0]) if "since" in qs else None
+                until = float(qs["until"][0]) if "until" in qs else None
+                events = engine.query(since=since, until=until)
+                self._json([_serial(e) for e in events])
+
+            elif parsed.path == "/data/stats":
+                dr = engine.date_range()
+                self._json({
+                    "total_events": engine.count(),
+                    "earliest": dr[0] if dr else None,
+                    "latest":   dr[1] if dr else None,
+                })
+
+            elif parsed.path in ("/", "/dashboard.html"):
+                body = template.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", len(body))
+                self.end_headers()
+                self.wfile.write(body)
+
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+    import webbrowser, threading
+    server = HTTPServer(("127.0.0.1", port), Handler)
+    url = f"http://127.0.0.1:{port}"
+    print(f"blackboxd dashboard → {url}  (Ctrl-C to stop)")
+    threading.Timer(0.3, lambda: webbrowser.open(url)).start()
+    server.serve_forever()
+
+
+
     """Bake all events into dashboard.html and write a self-contained file."""
     import dataclasses
 
@@ -77,7 +140,7 @@ def main() -> None:
         description="Render a human-readable timeline from blackboxd event data.",
     )
     parser.add_argument("command", nargs="?", default=None,
-                        help="Subcommand: 'dashboard' to open a self-contained HTML snapshot.")
+                        help="Subcommand: 'dashboard' (snapshot) or 'serve' (live).")
     parser.add_argument("--config",  "-c", metavar="PATH", type=Path, default=None)
     parser.add_argument("--date",    "-d", metavar="YYYY-MM-DD", default=None,
                         help="Show a specific date (default: today).")
@@ -93,6 +156,8 @@ def main() -> None:
                         help="Disable ANSI color output.")
     parser.add_argument("--export",  "-e", metavar="PATH", type=Path, default=None,
                         help="(dashboard) Write snapshot to this path instead of a temp file.")
+    parser.add_argument("--port",    "-p", metavar="PORT", type=int, default=9100,
+                        help="(serve) Port to listen on (default: 9100).")
     args = parser.parse_args()
 
     config = Config.load(args.config)
@@ -100,6 +165,10 @@ def main() -> None:
     with StorageEngine(config.storage.db_path) as engine:
         if args.command == "dashboard":
             _export_dashboard(engine, args.export)
+            return
+
+        if args.command == "serve":
+            _serve_dashboard(engine, args.port)
             return
 
         if engine.count() == 0:
