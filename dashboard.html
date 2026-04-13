@@ -5,181 +5,176 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>blackboxd</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
 
   :root {
-    --bg:       #0e0e0e;
-    --bg2:      #161616;
-    --bg3:      #1e1e1e;
-    --border:   #2a2a2a;
-    --border2:  #333;
-    --green:    #5fff87;
-    --green2:   #3db85a;
-    --green3:   #1d5c30;
-    --amber:    #ffcc44;
-    --red:      #ff5f5f;
-    --blue:     #5fafff;
-    --dim:      #555;
-    --muted:    #888;
-    --text:     #ccc;
-    --bright:   #eee;
-    --mono:     'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+    --bg:         linear-gradient(160deg, #0f2027, #203a43, #2c5364);
+    --card:       rgba(255,255,255,0.07);
+    --card-border:rgba(255,255,255,0.11);
+    --input-bg:   rgba(255,255,255,0.08);
+    --input-focus:rgba(255,255,255,0.15);
+    --text:       #f0f0f0;
+    --muted:      rgba(255,255,255,0.45);
+    --accent:     #ffd166;
+    --accent2:    #ffb703;
+    --green:      #5fff87;
+    --amber:      #ffd166;
+    --red:        #ff6b6b;
+    --blue:       #74b9ff;
+    --shadow:     0 8px 32px rgba(0,0,0,0.35);
   }
 
-  html, body {
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.5;
     min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+    animation: fadein 0.5s ease both;
   }
+
+  @keyframes fadein { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
 
   /* ── Layout ── */
   .frame {
     display: grid;
     grid-template-rows: auto 1fr auto;
     min-height: 100vh;
-    max-width: 1100px;
+    max-width: 1160px;
     margin: 0 auto;
-    padding: 0 16px;
+    padding: 0 20px;
   }
 
-  /* ── Titlebar ── */
-  .titlebar {
+  /* ── Header ── */
+  header {
     display: flex;
     align-items: center;
-    gap: 0;
-    padding: 10px 0 0;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 0;
+    gap: 14px;
+    padding: 22px 0 16px;
+    border-bottom: 1px solid var(--card-border);
   }
 
-  .tb-dots {
-    display: flex;
-    gap: 6px;
-    margin-right: 14px;
+  .header-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
   }
-  .tb-dots span {
-    width: 11px; height: 11px;
-    border-radius: 50%;
-    display: block;
-  }
-  .tb-dots .d-red    { background: #ff5f57; }
-  .tb-dots .d-yellow { background: #febc2e; }
-  .tb-dots .d-green  { background: #28c840; }
 
-  .tb-title {
-    font-size: 12px;
-    color: var(--dim);
-    letter-spacing: 0.04em;
-    flex: 1;
-    text-align: center;
-    padding-bottom: 8px;
+  .header-sub {
+    font-size: 13px;
+    color: var(--muted);
   }
-  .tb-title strong { color: var(--muted); font-weight: 500; }
 
-  .tb-status {
+  .header-clock {
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    color: var(--dim);
-    padding-bottom: 8px;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
   }
+
   .pulse {
-    width: 7px; height: 7px; border-radius: 50%;
+    width: 8px; height: 8px; border-radius: 50%;
     background: var(--green);
     animation: pulse 2s ease-in-out infinite;
+    flex-shrink: 0;
   }
-  @keyframes pulse {
-    0%,100% { opacity: 1; }
-    50%      { opacity: 0.3; }
-  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
 
-  /* ── Main body ── */
+  /* ── Body grid ── */
   .body {
     display: grid;
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 210px 1fr;
     gap: 0;
     min-height: 0;
+    padding: 20px 0;
+    align-items: start;
   }
 
   /* ── Sidebar ── */
   .sidebar {
-    border-right: 1px solid var(--border);
-    padding: 16px 0;
     display: flex;
     flex-direction: column;
-    gap: 0;
-  }
-
-  .sidebar-section {
-    margin-bottom: 20px;
+    gap: 6px;
+    padding-right: 16px;
+    position: sticky;
+    top: 20px;
   }
 
   .sidebar-label {
     font-size: 10px;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--dim);
-    padding: 0 14px 6px;
+    color: var(--muted);
+    padding: 10px 12px 4px;
   }
 
   .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 14px;
+    gap: 9px;
+    padding: 8px 12px;
+    border-radius: 10px;
     cursor: pointer;
     color: var(--muted);
-    font-size: 12px;
-    border-left: 2px solid transparent;
-    transition: all 0.1s;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.15s, color 0.15s;
     user-select: none;
   }
-  .nav-item:hover { color: var(--text); background: var(--bg2); }
-  .nav-item.active {
-    color: var(--green);
-    border-left-color: var(--green);
-    background: var(--bg2);
-  }
-  .nav-item .icon { width: 14px; text-align: center; opacity: 0.7; }
+  .nav-item:hover { background: var(--card); color: var(--text); }
+  .nav-item.active { background: rgba(255,209,102,0.12); color: var(--accent); }
+  .nav-item .icon { font-size: 14px; width: 16px; text-align: center; }
   .nav-badge {
     margin-left: auto;
-    font-size: 10px;
-    color: var(--dim);
+    font-size: 11px;
+    background: var(--input-bg);
+    padding: 1px 6px;
+    border-radius: 20px;
+    color: var(--muted);
   }
 
   .sidebar-divider {
     border: none;
-    border-top: 1px solid var(--border);
-    margin: 8px 14px;
+    border-top: 1px solid var(--card-border);
+    margin: 6px 12px;
   }
 
-  /* stat pills in sidebar */
   .stat-row {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    padding: 3px 14px;
-    font-size: 11px;
+    padding: 3px 12px;
+    font-size: 12px;
   }
-  .stat-row .sk { color: var(--dim); }
-  .stat-row .sv { color: var(--text); font-weight: 500; }
-  .stat-row .sv.green  { color: var(--green); }
-  .stat-row .sv.amber  { color: var(--amber); }
-  .stat-row .sv.red    { color: var(--red);   }
+  .stat-row .sk { color: var(--muted); }
+  .stat-row .sv { font-weight: 600; color: var(--text); }
+  .stat-row .sv.green { color: var(--green); }
+  .stat-row .sv.amber { color: var(--amber); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
 
   /* ── Main panel ── */
   .main {
-    padding: 16px 20px;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 16px;
   }
 
   /* ── Panel header ── */
@@ -187,463 +182,333 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
   }
   .panel-title {
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 700;
-    color: var(--bright);
-    letter-spacing: 0.06em;
+    color: var(--accent);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
-  .panel-subtitle {
-    font-size: 11px;
-    color: var(--dim);
-  }
-  .panel-controls {
-    margin-left: auto;
-    display: flex;
-    gap: 6px;
-  }
+  .panel-subtitle { font-size: 12px; color: var(--muted); }
+  .panel-controls { margin-left: auto; display: flex; gap: 6px; }
+
   .btn {
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 3px 9px;
-    background: none;
-    border: 1px solid var(--border2);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 4px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--card-border);
     color: var(--muted);
     cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.1s;
+    border-radius: 20px;
+    transition: all 0.15s;
   }
-  .btn:hover { border-color: var(--green); color: var(--green); }
-  .btn.active { border-color: var(--green); color: var(--green); background: var(--green3); }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: rgba(255,209,102,0.15); border-color: var(--accent); color: var(--accent); }
 
   /* ── Stats bar ── */
   .stats-bar {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
+    gap: 10px;
   }
   .stat-cell {
-    background: var(--bg2);
-    padding: 10px 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
   }
-  .stat-cell .label { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
-  .stat-cell .value { font-size: 20px; font-weight: 700; color: var(--bright); letter-spacing: -0.02em; }
+  .stat-cell .label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .stat-cell .value { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
   .stat-cell .value.green { color: var(--green); }
   .stat-cell .value.amber { color: var(--amber); }
-  .stat-cell .sub   { font-size: 10px; color: var(--dim); }
+  .stat-cell .sub { font-size: 11px; color: var(--muted); }
 
   /* ── Timeline ── */
-  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .timeline { display: flex; flex-direction: column; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--card-border); }
 
   .tl-row {
     display: grid;
-    grid-template-columns: 62px 130px 1fr 68px 90px;
+    grid-template-columns: 62px 130px 1fr 68px 110px;
     align-items: center;
-    gap: 0;
-    padding: 0;
-    border-bottom: 1px solid var(--border);
-    min-height: 32px;
+    min-height: 34px;
+    border-bottom: 1px solid var(--card-border);
+    transition: background 0.1s;
     cursor: default;
-    transition: background 0.08s;
   }
-  .tl-row:hover { background: var(--bg2); }
-  .tl-row.header {
-    background: var(--bg3);
-    cursor: default;
-    min-height: 24px;
-  }
-  .tl-row.header:hover { background: var(--bg3); }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-row:hover { background: var(--input-bg); }
+  .tl-row.header { background: rgba(255,255,255,0.04); min-height: 26px; }
+  .tl-row.header:hover { background: rgba(255,255,255,0.04); }
 
   .tl-cell {
     padding: 5px 10px;
-    font-size: 11px;
+    font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .tl-row.header .tl-cell {
-    font-size: 10px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--dim);
-  }
+  .tl-row.header .tl-cell { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 
-  .tl-time   { color: var(--muted); font-weight: 400; }
-  .tl-app    { color: var(--bright); font-weight: 500; }
-  .tl-title  { color: var(--muted); }
-  .tl-dur    { color: var(--text); text-align: right; }
-  .tl-focus  { text-align: right; }
+  .tl-time  { color: var(--muted); }
+  .tl-app   { font-weight: 600; color: var(--text); }
+  .tl-title { color: var(--muted); }
+  .tl-dur   { text-align: right; color: var(--text); }
 
-  .tl-bar-wrap {
-    padding: 5px 10px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    overflow: hidden;
-  }
-  .tl-bar {
-    height: 4px;
-    background: var(--green2);
-    border-radius: 1px;
-    min-width: 2px;
-    flex-shrink: 0;
-  }
+  .tl-bar-wrap { padding: 5px 10px; display: flex; align-items: center; gap: 7px; overflow: hidden; }
+  .tl-bar { height: 4px; border-radius: 2px; min-width: 2px; flex-shrink: 0; background: rgba(255,209,102,0.4); }
+  .tl-bar.deep    { background: var(--green); }
   .tl-bar.shallow { background: var(--amber); }
-  .tl-bar.glance  { background: var(--dim);   }
-  .tl-bar.deep    { background: var(--green);  }
+  .tl-bar.glance  { background: rgba(255,255,255,0.2); }
 
   .focus-tag {
-    display: inline-block;
-    font-size: 9px;
-    letter-spacing: 0.08em;
-    padding: 1px 5px;
-    border-radius: 1px;
-    text-transform: uppercase;
-    font-weight: 700;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
+    padding: 2px 6px; border-radius: 20px; text-transform: uppercase;
+    background: var(--input-bg); color: var(--muted); border: 1px solid var(--card-border);
   }
-  .focus-tag.deep      { color: var(--green);  border: 1px solid var(--green3); }
-  .focus-tag.sustained { color: var(--text);   border: 1px solid var(--border2); }
-  .focus-tag.shallow   { color: var(--amber);  border: 1px solid #5a4400; }
-  .focus-tag.glance    { color: var(--dim);    border: 1px solid var(--border); }
+  .focus-tag.deep      { background: rgba(95,255,135,0.12); color: var(--green); border-color: rgba(95,255,135,0.3); }
+  .focus-tag.shallow   { background: rgba(255,209,102,0.12); color: var(--amber); border-color: rgba(255,209,102,0.3); }
+  .focus-tag.glance    { color: var(--muted); }
 
-  /* idle row */
-  .tl-row.idle-gap {
-    min-height: 20px;
-    background: transparent;
-    cursor: default;
-  }
+  .tl-row.idle-gap { min-height: 22px; background: transparent; }
   .tl-row.idle-gap:hover { background: transparent; }
-  .tl-row.idle-gap .tl-cell {
-    color: var(--dim);
-    font-size: 10px;
-    font-style: italic;
-    grid-column: 1 / -1;
-    padding: 3px 10px;
-    letter-spacing: 0.04em;
-  }
+  .tl-row.idle-gap .tl-cell { color: var(--muted); font-size: 11px; font-style: italic; grid-column: 1/-1; }
 
-  /* ── App breakdown ── */
+  /* ── Apps ── */
   .app-list { display: flex; flex-direction: column; gap: 0; }
-
   .app-row {
     display: grid;
-    grid-template-columns: 140px 1fr 60px;
+    grid-template-columns: 150px 1fr 64px;
     align-items: center;
-    gap: 10px;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--card-border);
   }
-  .app-name { font-size: 12px; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .app-bar-track {
-    height: 6px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 1px;
-    overflow: hidden;
-  }
-  .app-bar-fill {
-    height: 100%;
-    background: var(--green2);
-    border-radius: 1px;
-    transition: width 0.4s ease;
-  }
-  .app-time { font-size: 11px; color: var(--muted); text-align: right; }
+  .app-row:last-child { border-bottom: none; }
+  .app-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-bar-track { height: 6px; background: var(--input-bg); border-radius: 3px; overflow: hidden; border: 1px solid var(--card-border); }
+  .app-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 3px; transition: width 0.4s ease; }
+  .app-time { font-size: 12px; color: var(--muted); text-align: right; }
 
-  /* ── Activity heatmap ── */
-  .heatmap {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .heatmap-row {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .heatmap-label {
-    font-size: 10px;
-    color: var(--dim);
-    width: 26px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-  .heatmap-cells {
-    display: flex;
-    gap: 3px;
-    flex: 1;
-  }
+  /* ── Heatmap ── */
+  .heatmap { display: flex; flex-direction: column; gap: 5px; }
+  .heatmap-row { display: flex; align-items: center; gap: 5px; }
+  .heatmap-label { font-size: 10px; color: var(--muted); width: 28px; text-align: right; flex-shrink: 0; }
+  .heatmap-cells { display: flex; gap: 3px; flex: 1; }
   .hm-cell {
-    flex: 1;
-    height: 14px;
-    border-radius: 1px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    transition: background 0.2s;
-    cursor: default;
-    position: relative;
+    flex: 1; height: 14px; border-radius: 2px;
+    background: var(--input-bg); border: 1px solid var(--card-border);
+    transition: background 0.2s; cursor: default; position: relative;
   }
   .hm-cell:hover::after {
     content: attr(data-tip);
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--bg3);
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-size: 10px;
-    padding: 2px 6px;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 10;
+    position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: #1a2a35; border: 1px solid var(--card-border);
+    color: var(--text); font-size: 10px; padding: 3px 8px;
+    white-space: nowrap; pointer-events: none; z-index: 10; border-radius: 6px;
   }
-  .hm-cell.l1 { background: var(--green3); border-color: var(--green3); }
-  .hm-cell.l2 { background: var(--green2); border-color: var(--green2); opacity: 0.7; }
-  .hm-cell.l3 { background: var(--green);  border-color: var(--green);  opacity: 0.8; }
+  .hm-cell.l1 { background: rgba(255,183,3,0.2); border-color: rgba(255,183,3,0.3); }
+  .hm-cell.l2 { background: rgba(255,183,3,0.5); border-color: rgba(255,183,3,0.6); }
+  .hm-cell.l3 { background: var(--accent); border-color: var(--accent); }
+  .heatmap-hours { display: flex; gap: 3px; padding-left: 33px; margin-bottom: -2px; }
+  .heatmap-hours span { flex: 1; font-size: 9px; color: var(--muted); text-align: center; }
 
-  .heatmap-hours {
-    display: flex;
-    gap: 3px;
-    padding-left: 31px;
-    margin-bottom: -2px;
-  }
-  .heatmap-hours span {
-    flex: 1;
-    font-size: 9px;
-    color: var(--dim);
-    text-align: center;
-  }
-
-  /* ── Log view ── */
-  .log-view {
-    font-size: 11px;
-    line-height: 1.7;
-    color: var(--muted);
-    max-height: 320px;
-    overflow-y: auto;
-  }
+  /* ── Log ── */
+  .log-view { font-size: 12px; line-height: 1.8; color: var(--muted); max-height: 340px; overflow-y: auto; }
   .log-line { display: flex; gap: 12px; }
-  .log-ts   { color: var(--dim); flex-shrink: 0; width: 80px; }
-  .log-kind { flex-shrink: 0; width: 130px; }
-  .log-kind.focus   { color: var(--blue);  }
-  .log-kind.idle    { color: var(--amber); }
-  .log-kind.switch  { color: var(--green); }
-  .log-kind.daemon  { color: var(--dim);   }
+  .log-ts   { color: var(--muted); flex-shrink: 0; width: 80px; }
+  .log-kind { flex-shrink: 0; width: 140px; }
+  .log-kind.focus  { color: var(--blue); }
+  .log-kind.idle   { color: var(--amber); }
+  .log-kind.switch { color: var(--green); }
+  .log-kind.daemon { color: var(--muted); }
   .log-body { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* ── Status bar ── */
   .statusbar {
-    border-top: 1px solid var(--border);
-    padding: 5px 14px;
+    border-top: 1px solid var(--card-border);
+    padding: 8px 0;
     display: flex;
     align-items: center;
     gap: 16px;
-    font-size: 10px;
-    color: var(--dim);
-    background: var(--bg2);
+    font-size: 11px;
+    color: var(--muted);
   }
-  .statusbar .seg { display: flex; align-items: center; gap: 5px; }
-  .statusbar .seg .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-  .statusbar .sep { color: var(--border2); }
-  .statusbar .ml { margin-left: auto; }
+  .statusbar .seg { display: flex; align-items: center; gap: 6px; }
+  .statusbar .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .statusbar .sep { color: var(--card-border); }
+  .statusbar .ml  { margin-left: auto; }
 
-  /* ── Section wrapper ── */
-  .section {
-    display: none;
-    flex-direction: column;
-    gap: 14px;
-    animation: fadein 0.12s ease;
-  }
+  /* ── Section ── */
+  .section { display: none; flex-direction: column; gap: 14px; animation: fadein 0.15s ease; }
   .section.active { display: flex; }
-  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
   /* scrollbar */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 </style>
 </head>
 <body>
 <div class="frame">
 
-  <!-- Titlebar -->
-  <div class="titlebar">
-    <div class="tb-dots">
-      <span class="d-red"></span>
-      <span class="d-yellow"></span>
-      <span class="d-green"></span>
+  <header>
+    <div>
+      <div class="header-title">blackboxd</div>
+      <div class="header-sub">activity recorder v0.1.0</div>
     </div>
-    <div class="tb-title"><strong>blackboxd</strong> — activity recorder v0.1.0</div>
-    <div class="tb-status">
+    <div class="header-clock">
       <span class="pulse"></span>
       <span id="live-time">--:--:--</span>
     </div>
-  </div>
+  </header>
 
-  <!-- Body -->
   <div class="body">
 
     <!-- Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-section">
-        <div class="sidebar-label">views</div>
-        <div class="nav-item active" onclick="showSection('timeline', this)">
-          <span class="icon">▶</span> timeline
-        </div>
-        <div class="nav-item" onclick="showSection('apps', this)">
-          <span class="icon">□</span> apps
-          <span class="nav-badge">8</span>
-        </div>
-        <div class="nav-item" onclick="showSection('heatmap', this)">
-          <span class="icon">▦</span> heatmap
-        </div>
-        <div class="nav-item" onclick="showSection('log', this)">
-          <span class="icon">≡</span> raw log
-          <span class="nav-badge">247</span>
-        </div>
+      <div class="sidebar-label">views</div>
+      <div class="nav-item active" onclick="showSection('timeline', this)">
+        <span class="icon">▶</span> timeline
+      </div>
+      <div class="nav-item" onclick="showSection('apps', this)">
+        <span class="icon">□</span> apps
+        <span class="nav-badge">8</span>
+      </div>
+      <div class="nav-item" onclick="showSection('heatmap', this)">
+        <span class="icon">▦</span> heatmap
+      </div>
+      <div class="nav-item" onclick="showSection('log', this)">
+        <span class="icon">≡</span> raw log
+        <span class="nav-badge">247</span>
       </div>
 
       <hr class="sidebar-divider">
+      <div class="sidebar-label">today</div>
+      <div class="stat-row"><span class="sk">active</span>   <span class="sv green">—</span></div>
+      <div class="stat-row"><span class="sk">idle</span>     <span class="sv">—</span></div>
+      <div class="stat-row"><span class="sk">switches</span> <span class="sv">—</span></div>
+      <div class="stat-row"><span class="sk">deep</span>     <span class="sv green">—</span></div>
+      <div class="stat-row"><span class="sk">shallow</span>  <span class="sv amber">—</span></div>
+      <div class="stat-row"><span class="sk">events</span>   <span class="sv">—</span></div>
 
-      <div class="sidebar-section">
-        <div class="sidebar-label">today</div>
-        <div class="stat-row"><span class="sk">active</span>   <span class="sv green">6h 14m</span></div>
-        <div class="stat-row"><span class="sk">idle</span>     <span class="sv">1h 03m</span></div>
-        <div class="stat-row"><span class="sk">switches</span> <span class="sv">31</span></div>
-        <div class="stat-row"><span class="sk">deep</span>     <span class="sv green">4</span></div>
-        <div class="stat-row"><span class="sk">shallow</span>  <span class="sv amber">9</span></div>
-        <div class="stat-row"><span class="sk">events</span>   <span class="sv">247</span></div>
+      <hr class="sidebar-divider">
+      <div class="sidebar-label">date</div>
+      <div class="nav-item">
+        <span class="icon">◈</span> <span id="sb-date">today</span>
       </div>
 
       <hr class="sidebar-divider">
-
-      <div class="sidebar-section">
-        <div class="sidebar-label">date</div>
-        <div class="nav-item" onclick="alert('date picker — connect to backend')">
-          <span class="icon">◈</span> <span id="sb-date">today</span>
-        </div>
-      </div>
-
-      <hr class="sidebar-divider">
-
-      <div class="sidebar-section">
-        <div class="sidebar-label">daemon</div>
-        <div class="stat-row"><span class="sk">backend</span>  <span class="sv">hyprland</span></div>
-        <div class="stat-row"><span class="sk">pid</span>      <span class="sv">14822</span></div>
-        <div class="stat-row"><span class="sk">poll</span>     <span class="sv">1.0s</span></div>
-        <div class="stat-row"><span class="sk">db</span>       <span class="sv">1.2 MB</span></div>
-      </div>
+      <div class="sidebar-label">daemon</div>
+      <div class="stat-row"><span class="sk">backend</span> <span class="sv">hyprland</span></div>
+      <div class="stat-row"><span class="sk">poll</span>    <span class="sv">1.0s</span></div>
     </div>
 
     <!-- Main -->
     <div class="main" id="main-panel">
 
-      <!-- ── TIMELINE section ── -->
+      <!-- TIMELINE -->
       <div class="section active" id="s-timeline">
-        <div class="panel-header">
-          <span class="panel-title">timeline</span>
-          <span class="panel-subtitle" id="tl-date-label">Thursday, April 09 2026</span>
-          <div class="panel-controls">
-            <button class="btn active" onclick="setFilter('all',this)">all</button>
-            <button class="btn" onclick="setFilter('deep',this)">deep</button>
-            <button class="btn" onclick="setFilter('idle',this)">idle</button>
+        <div class="card">
+          <div class="panel-header">
+            <span class="panel-title">timeline</span>
+            <span class="panel-subtitle" id="tl-date-label"></span>
+            <div class="panel-controls">
+              <button class="btn active" onclick="setFilter('all',this)">all</button>
+              <button class="btn" onclick="setFilter('deep',this)">deep</button>
+              <button class="btn" onclick="setFilter('idle',this)">idle</button>
+            </div>
           </div>
-        </div>
-
-        <div class="stats-bar">
-          <div class="stat-cell">
-            <span class="label">active</span>
-            <span class="value green">6:14</span>
-            <span class="sub">hours:min</span>
+          <div class="stats-bar">
+            <div class="stat-cell">
+              <span class="label">active</span>
+              <span class="value green">—</span>
+              <span class="sub">hours:min</span>
+            </div>
+            <div class="stat-cell">
+              <span class="label">deep sessions</span>
+              <span class="value">—</span>
+              <span class="sub">≥ 25 min unbroken</span>
+            </div>
+            <div class="stat-cell">
+              <span class="label">switches</span>
+              <span class="value amber">—</span>
+              <span class="sub">context changes</span>
+            </div>
+            <div class="stat-cell">
+              <span class="label">idle</span>
+              <span class="value">—</span>
+              <span class="sub">hours:min</span>
+            </div>
           </div>
-          <div class="stat-cell">
-            <span class="label">deep sessions</span>
-            <span class="value">4</span>
-            <span class="sub">≥ 25 min unbroken</span>
+          <div class="timeline" id="timeline-rows">
+            <div class="tl-row header">
+              <div class="tl-cell">time</div>
+              <div class="tl-cell">app</div>
+              <div class="tl-cell">title</div>
+              <div class="tl-cell" style="text-align:right">duration</div>
+              <div class="tl-cell" style="text-align:right">focus</div>
+            </div>
           </div>
-          <div class="stat-cell">
-            <span class="label">switches</span>
-            <span class="value amber">31</span>
-            <span class="sub">context changes</span>
-          </div>
-          <div class="stat-cell">
-            <span class="label">idle</span>
-            <span class="value">1:03</span>
-            <span class="sub">hours:min</span>
-          </div>
-        </div>
-
-        <div class="timeline" id="timeline-rows">
-          <!-- header -->
-          <div class="tl-row header">
-            <div class="tl-cell">time</div>
-            <div class="tl-cell">app</div>
-            <div class="tl-cell">title</div>
-            <div class="tl-cell" style="text-align:right">duration</div>
-            <div class="tl-cell" style="text-align:right">focus</div>
-          </div>
-          <!-- rows injected by JS -->
         </div>
       </div>
 
-      <!-- ── APPS section ── -->
+      <!-- APPS -->
       <div class="section" id="s-apps">
-        <div class="panel-header">
-          <span class="panel-title">applications</span>
-          <span class="panel-subtitle">time distribution</span>
-        </div>
-        <div class="app-list" id="app-list-rows"></div>
-      </div>
-
-      <!-- ── HEATMAP section ── -->
-      <div class="section" id="s-heatmap">
-        <div class="panel-header">
-          <span class="panel-title">activity heatmap</span>
-          <span class="panel-subtitle">last 7 days × 24 hours</span>
-        </div>
-        <div class="heatmap-hours" id="hm-hour-labels"></div>
-        <div class="heatmap" id="heatmap-grid"></div>
-      </div>
-
-      <!-- ── LOG section ── -->
-      <div class="section" id="s-log">
-        <div class="panel-header">
-          <span class="panel-title">raw event log</span>
-          <span class="panel-subtitle">247 events today</span>
-          <div class="panel-controls">
-            <button class="btn active">focus</button>
-            <button class="btn">idle</button>
-            <button class="btn">all</button>
+        <div class="card">
+          <div class="panel-header">
+            <span class="panel-title">applications</span>
+            <span class="panel-subtitle">time distribution</span>
           </div>
+          <div class="app-list" id="app-list-rows"></div>
         </div>
-        <div class="log-view" id="log-view"></div>
       </div>
 
-    </div><!-- /main -->
-  </div><!-- /body -->
+      <!-- HEATMAP -->
+      <div class="section" id="s-heatmap">
+        <div class="card">
+          <div class="panel-header">
+            <span class="panel-title">activity heatmap</span>
+            <span class="panel-subtitle">last 7 days × 24 hours</span>
+          </div>
+          <div class="heatmap-hours" id="hm-hour-labels"></div>
+          <div class="heatmap" id="heatmap-grid"></div>
+        </div>
+      </div>
 
-  <!-- Statusbar -->
+      <!-- LOG -->
+      <div class="section" id="s-log">
+        <div class="card">
+          <div class="panel-header">
+            <span class="panel-title">raw event log</span>
+            <span class="panel-subtitle">247 events today</span>
+            <div class="panel-controls">
+              <button class="btn active">focus</button>
+              <button class="btn">idle</button>
+              <button class="btn">all</button>
+            </div>
+          </div>
+          <div class="log-view" id="log-view"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <div class="statusbar">
     <div class="seg"><span class="dot"></span> recording</div>
     <span class="sep">|</span>
-    <div class="seg">backend: hyprland</div>
-    <span class="sep">|</span>
     <div class="seg">db: ~/.local/share/blackboxd/events.db</div>
-    <span class="sep">|</span>
-    <div class="seg">retention: forever</div>
-    <div class="seg ml" id="sb-event-count">247 events</div>
+    <div class="seg ml" id="sb-event-count">— events</div>
   </div>
 
-</div><!-- /frame -->
+</div>
 
 <script>
 /* BLACKBOXD_INLINE_DATA — replaced by `blackboxd dashboard --export` */
@@ -652,8 +517,6 @@ const LIVE_API = window.location.port ? window.location.origin : null;
 
 const API = LIVE_API || 'http://localhost:9099';
 let allEvents = [], activeFilter = 'all', viewDate = null;
-
-// ── Utilities ──────────────────────────────────────────────────────────────
 
 function fmtTime(ts) {
   const d = new Date(ts * 1000);
@@ -679,8 +542,6 @@ function dayBounds(date) {
   d.setHours(0,0,0,0);
   return [d.getTime()/1000, d.getTime()/1000 + 86400];
 }
-
-// ── Fetch & process ────────────────────────────────────────────────────────
 
 async function loadData(date) {
   if (INLINE_DATA) {
@@ -725,25 +586,18 @@ function computeStats(sessions, events) {
   for (const e of events) {
     if (e.kind === 'idle' && e.idle_seconds) idle += e.idle_seconds;
   }
-  const switches = sessions.length;
-  return { active, idle, deep, shallow, switches, total: events.length };
+  return { active, idle, deep, shallow, switches: sessions.length, total: events.length };
 }
-
-// ── Render ─────────────────────────────────────────────────────────────────
 
 function renderTimeline(sessions) {
   const container = document.getElementById('timeline-rows');
   const header = container.querySelector('.tl-row.header');
   container.innerHTML = '';
   container.appendChild(header);
-
   const maxDur = Math.max(...sessions.map(s => s.duration), 1);
   let prevTs = null;
-
   for (const s of sessions) {
-    if (activeFilter !== 'all' && s.focus !== activeFilter && !(activeFilter === 'idle')) continue;
-
-    // idle gap
+    if (activeFilter !== 'all' && s.focus !== activeFilter) continue;
     if (prevTs !== null && s.ts - prevTs > 300) {
       const gap = document.createElement('div');
       gap.className = 'tl-row idle-gap';
@@ -751,7 +605,6 @@ function renderTimeline(sessions) {
       container.appendChild(gap);
     }
     prevTs = s.ts + s.duration;
-
     const pct = Math.round((s.duration / maxDur) * 100);
     const barClass = s.focus === 'deep' ? 'deep' : s.focus === 'shallow' ? 'shallow' : s.focus === 'glance' ? 'glance' : '';
     const row = document.createElement('div');
@@ -772,8 +625,7 @@ function renderApps(sessions) {
   for (const s of sessions) totals[s.app] = (totals[s.app] || 0) + s.duration;
   const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
   const max = sorted[0]?.[1] || 1;
-  const container = document.getElementById('app-list-rows');
-  container.innerHTML = sorted.map(([app, dur]) => `
+  document.getElementById('app-list-rows').innerHTML = sorted.map(([app, dur]) => `
     <div class="app-row">
       <div class="app-name">${app}</div>
       <div class="app-bar-track"><div class="app-bar-fill" style="width:${Math.round(dur/max*100)}%"></div></div>
@@ -787,12 +639,8 @@ function renderHeatmap(events) {
   const hourLabels = document.getElementById('hm-hour-labels');
   const days = 7;
   const now = new Date(); now.setHours(0,0,0,0);
-
-  // build hour labels
   hourLabels.innerHTML = Array.from({length:24},(_,i)=>
     `<span>${i%6===0?String(i).padStart(2,'0'):''}</span>`).join('');
-
-  // bucket events by day+hour
   const buckets = {};
   for (const e of events) {
     if (e.kind !== 'window_focus') continue;
@@ -802,8 +650,6 @@ function renderHeatmap(events) {
     const key = `${dayOff}:${d.getHours()}`;
     buckets[key] = (buckets[key] || 0) + 1;
   }
-
-  // fetch 7 days of events for heatmap
   const maxVal = Math.max(...Object.values(buckets), 1);
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   grid.innerHTML = '';
@@ -834,12 +680,9 @@ function renderLog(events) {
 }
 
 function renderSidebar(st) {
-  const rows = document.querySelectorAll('#main-panel ~ * .stat-row .sv, .sidebar .stat-row .sv');
-  // update sidebar stats
   const sb = document.querySelector('.sidebar');
-  const statVals = sb.querySelectorAll('.stat-row');
   const map = { active: fmtHM(st.active), idle: fmtHM(st.idle), switches: st.switches, deep: st.deep, shallow: st.shallow, events: st.total };
-  statVals.forEach(row => {
+  sb.querySelectorAll('.stat-row').forEach(row => {
     const key = row.querySelector('.sk')?.textContent?.trim();
     if (key && map[key] !== undefined) row.querySelector('.sv').textContent = map[key];
   });
@@ -854,10 +697,8 @@ function renderStatsBar(st) {
   if (cells[3]) cells[3].querySelector('.value').textContent = fmtHM(st.idle);
 }
 
-// ── Main render pipeline ───────────────────────────────────────────────────
-
 async function refresh(date) {
-  const statusDot = document.querySelector('.statusbar .dot');
+  const dot = document.querySelector('.statusbar .dot');
   try {
     await loadData(date);
     const sessions = buildSessions(allEvents);
@@ -871,15 +712,12 @@ async function refresh(date) {
     const d = date ? new Date(date) : new Date();
     document.getElementById('tl-date-label').textContent = d.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
     document.getElementById('sb-date').textContent = date ? d.toLocaleDateString() : 'today';
-    if (statusDot) statusDot.style.background = 'var(--green)';
+    if (dot) dot.style.background = 'var(--green)';
   } catch(err) {
-    if (statusDot) statusDot.style.background = 'var(--red)';
-    document.querySelector('.statusbar').title = 'API unreachable: ' + err.message;
-    console.warn('blackboxd-api unreachable:', err.message);
+    if (dot) dot.style.background = 'var(--red)';
+    console.warn('blackboxd unreachable:', err.message);
   }
 }
-
-// ── UI controls ────────────────────────────────────────────────────────────
 
 function showSection(name, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -895,13 +733,9 @@ function setFilter(f, btn) {
   renderTimeline(buildSessions(allEvents));
 }
 
-// ── Clock ──────────────────────────────────────────────────────────────────
-
 setInterval(() => {
   document.getElementById('live-time').textContent = new Date().toTimeString().slice(0,8);
 }, 1000);
-
-// ── Boot ───────────────────────────────────────────────────────────────────
 
 refresh(null);
 if (!INLINE_DATA) setInterval(() => refresh(viewDate), 30000);
