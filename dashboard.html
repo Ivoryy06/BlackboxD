@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>blackboxd</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0e0e0e;
+    --bg2:      #161616;
+    --bg3:      #1e1e1e;
+    --border:   #2a2a2a;
+    --border2:  #333;
+    --green:    #5fff87;
+    --green2:   #3db85a;
+    --green3:   #1d5c30;
+    --amber:    #ffcc44;
+    --red:      #ff5f5f;
+    --blue:     #5fafff;
+    --dim:      #555;
+    --muted:    #888;
+    --text:     #ccc;
+    --bright:   #eee;
+    --mono:     'JetBrains Mono', 'Fira Mono', 'Consolas', monospace;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ── */
+  .frame {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100vh;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+
+  /* ── Titlebar ── */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 10px 0 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+
+  .tb-dots {
+    display: flex;
+    gap: 6px;
+    margin-right: 14px;
+  }
+  .tb-dots span {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    display: block;
+  }
+  .tb-dots .d-red    { background: #ff5f57; }
+  .tb-dots .d-yellow { background: #febc2e; }
+  .tb-dots .d-green  { background: #28c840; }
+
+  .tb-title {
+    font-size: 12px;
+    color: var(--dim);
+    letter-spacing: 0.04em;
+    flex: 1;
+    text-align: center;
+    padding-bottom: 8px;
+  }
+  .tb-title strong { color: var(--muted); font-weight: 500; }
+
+  .tb-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--dim);
+    padding-bottom: 8px;
+  }
+  .pulse {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  /* ── Main body ── */
+  .body {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 0;
+    min-height: 0;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .sidebar-section {
+    margin-bottom: 20px;
+  }
+
+  .sidebar-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    padding: 0 14px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    border-left: 2px solid transparent;
+    transition: all 0.1s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg2); }
+  .nav-item.active {
+    color: var(--green);
+    border-left-color: var(--green);
+    background: var(--bg2);
+  }
+  .nav-item .icon { width: 14px; text-align: center; opacity: 0.7; }
+  .nav-badge {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--dim);
+  }
+
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 8px 14px;
+  }
+
+  /* stat pills in sidebar */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 3px 14px;
+    font-size: 11px;
+  }
+  .stat-row .sk { color: var(--dim); }
+  .stat-row .sv { color: var(--text); font-weight: 500; }
+  .stat-row .sv.green  { color: var(--green); }
+  .stat-row .sv.amber  { color: var(--amber); }
+  .stat-row .sv.red    { color: var(--red);   }
+
+  /* ── Main panel ── */
+  .main {
+    padding: 16px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ── Panel header ── */
+  .panel-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bright);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .panel-subtitle {
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .panel-controls {
+    margin-left: auto;
+    display: flex;
+    gap: 6px;
+  }
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.1s;
+  }
+  .btn:hover { border-color: var(--green); color: var(--green); }
+  .btn.active { border-color: var(--green); color: var(--green); background: var(--green3); }
+
+  /* ── Stats bar ── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .stat-cell {
+    background: var(--bg2);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .stat-cell .label { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
+  .stat-cell .value { font-size: 20px; font-weight: 700; color: var(--bright); letter-spacing: -0.02em; }
+  .stat-cell .value.green { color: var(--green); }
+  .stat-cell .value.amber { color: var(--amber); }
+  .stat-cell .sub   { font-size: 10px; color: var(--dim); }
+
+  /* ── Timeline ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+
+  .tl-row {
+    display: grid;
+    grid-template-columns: 62px 130px 1fr 68px 90px;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--border);
+    min-height: 32px;
+    cursor: default;
+    transition: background 0.08s;
+  }
+  .tl-row:hover { background: var(--bg2); }
+  .tl-row.header {
+    background: var(--bg3);
+    cursor: default;
+    min-height: 24px;
+  }
+  .tl-row.header:hover { background: var(--bg3); }
+
+  .tl-cell {
+    padding: 5px 10px;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tl-row.header .tl-cell {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .tl-time   { color: var(--muted); font-weight: 400; }
+  .tl-app    { color: var(--bright); font-weight: 500; }
+  .tl-title  { color: var(--muted); }
+  .tl-dur    { color: var(--text); text-align: right; }
+  .tl-focus  { text-align: right; }
+
+  .tl-bar-wrap {
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .tl-bar {
+    height: 4px;
+    background: var(--green2);
+    border-radius: 1px;
+    min-width: 2px;
+    flex-shrink: 0;
+  }
+  .tl-bar.shallow { background: var(--amber); }
+  .tl-bar.glance  { background: var(--dim);   }
+  .tl-bar.deep    { background: var(--green);  }
+
+  .focus-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    padding: 1px 5px;
+    border-radius: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .focus-tag.deep      { color: var(--green);  border: 1px solid var(--green3); }
+  .focus-tag.sustained { color: var(--text);   border: 1px solid var(--border2); }
+  .focus-tag.shallow   { color: var(--amber);  border: 1px solid #5a4400; }
+  .focus-tag.glance    { color: var(--dim);    border: 1px solid var(--border); }
+
+  /* idle row */
+  .tl-row.idle-gap {
+    min-height: 20px;
+    background: transparent;
+    cursor: default;
+  }
+  .tl-row.idle-gap:hover { background: transparent; }
+  .tl-row.idle-gap .tl-cell {
+    color: var(--dim);
+    font-size: 10px;
+    font-style: italic;
+    grid-column: 1 / -1;
+    padding: 3px 10px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── App breakdown ── */
+  .app-list { display: flex; flex-direction: column; gap: 0; }
+
+  .app-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 60px;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .app-name { font-size: 12px; color: var(--bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-bar-track {
+    height: 6px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .app-bar-fill {
+    height: 100%;
+    background: var(--green2);
+    border-radius: 1px;
+    transition: width 0.4s ease;
+  }
+  .app-time { font-size: 11px; color: var(--muted); text-align: right; }
+
+  /* ── Activity heatmap ── */
+  .heatmap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .heatmap-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .heatmap-label {
+    font-size: 10px;
+    color: var(--dim);
+    width: 26px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .heatmap-cells {
+    display: flex;
+    gap: 3px;
+    flex: 1;
+  }
+  .hm-cell {
+    flex: 1;
+    height: 14px;
+    border-radius: 1px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: default;
+    position: relative;
+  }
+  .hm-cell:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-size: 10px;
+    padding: 2px 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .hm-cell.l1 { background: var(--green3); border-color: var(--green3); }
+  .hm-cell.l2 { background: var(--green2); border-color: var(--green2); opacity: 0.7; }
+  .hm-cell.l3 { background: var(--green);  border-color: var(--green);  opacity: 0.8; }
+
+  .heatmap-hours {
+    display: flex;
+    gap: 3px;
+    padding-left: 31px;
+    margin-bottom: -2px;
+  }
+  .heatmap-hours span {
+    flex: 1;
+    font-size: 9px;
+    color: var(--dim);
+    text-align: center;
+  }
+
+  /* ── Log view ── */
+  .log-view {
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--muted);
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .log-line { display: flex; gap: 12px; }
+  .log-ts   { color: var(--dim); flex-shrink: 0; width: 80px; }
+  .log-kind { flex-shrink: 0; width: 130px; }
+  .log-kind.focus   { color: var(--blue);  }
+  .log-kind.idle    { color: var(--amber); }
+  .log-kind.switch  { color: var(--green); }
+  .log-kind.daemon  { color: var(--dim);   }
+  .log-body { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── Status bar ── */
+  .statusbar {
+    border-top: 1px solid var(--border);
+    padding: 5px 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--dim);
+    background: var(--bg2);
+  }
+  .statusbar .seg { display: flex; align-items: center; gap: 5px; }
+  .statusbar .seg .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .statusbar .sep { color: var(--border2); }
+  .statusbar .ml { margin-left: auto; }
+
+  /* ── Section wrapper ── */
+  .section {
+    display: none;
+    flex-direction: column;
+    gap: 14px;
+    animation: fadein 0.12s ease;
+  }
+  .section.active { display: flex; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <div class="tb-dots">
+      <span class="d-red"></span>
+      <span class="d-yellow"></span>
+      <span class="d-green"></span>
+    </div>
+    <div class="tb-title"><strong>blackboxd</strong> — activity recorder v0.1.0</div>
+    <div class="tb-status">
+      <span class="pulse"></span>
+      <span id="live-time">--:--:--</span>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">views</div>
+        <div class="nav-item active" onclick="showSection('timeline', this)">
+          <span class="icon">▶</span> timeline
+        </div>
+        <div class="nav-item" onclick="showSection('apps', this)">
+          <span class="icon">□</span> apps
+          <span class="nav-badge">8</span>
+        </div>
+        <div class="nav-item" onclick="showSection('heatmap', this)">
+          <span class="icon">▦</span> heatmap
+        </div>
+        <div class="nav-item" onclick="showSection('log', this)">
+          <span class="icon">≡</span> raw log
+          <span class="nav-badge">247</span>
+        </div>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">today</div>
+        <div class="stat-row"><span class="sk">active</span>   <span class="sv green">6h 14m</span></div>
+        <div class="stat-row"><span class="sk">idle</span>     <span class="sv">1h 03m</span></div>
+        <div class="stat-row"><span class="sk">switches</span> <span class="sv">31</span></div>
+        <div class="stat-row"><span class="sk">deep</span>     <span class="sv green">4</span></div>
+        <div class="stat-row"><span class="sk">shallow</span>  <span class="sv amber">9</span></div>
+        <div class="stat-row"><span class="sk">events</span>   <span class="sv">247</span></div>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">date</div>
+        <div class="nav-item" onclick="alert('date picker — connect to backend')">
+          <span class="icon">◈</span> <span id="sb-date">today</span>
+        </div>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">daemon</div>
+        <div class="stat-row"><span class="sk">backend</span>  <span class="sv">hyprland</span></div>
+        <div class="stat-row"><span class="sk">pid</span>      <span class="sv">14822</span></div>
+        <div class="stat-row"><span class="sk">poll</span>     <span class="sv">1.0s</span></div>
+        <div class="stat-row"><span class="sk">db</span>       <span class="sv">1.2 MB</span></div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main" id="main-panel">
+
+      <!-- ── TIMELINE section ── -->
+      <div class="section active" id="s-timeline">
+        <div class="panel-header">
+          <span class="panel-title">timeline</span>
+          <span class="panel-subtitle" id="tl-date-label">Thursday, April 09 2026</span>
+          <div class="panel-controls">
+            <button class="btn active" onclick="setFilter('all',this)">all</button>
+            <button class="btn" onclick="setFilter('deep',this)">deep</button>
+            <button class="btn" onclick="setFilter('idle',this)">idle</button>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <div class="stat-cell">
+            <span class="label">active</span>
+            <span class="value green">6:14</span>
+            <span class="sub">hours:min</span>
+          </div>
+          <div class="stat-cell">
+            <span class="label">deep sessions</span>
+            <span class="value">4</span>
+            <span class="sub">≥ 25 min unbroken</span>
+          </div>
+          <div class="stat-cell">
+            <span class="label">switches</span>
+            <span class="value amber">31</span>
+            <span class="sub">context changes</span>
+          </div>
+          <div class="stat-cell">
+            <span class="label">idle</span>
+            <span class="value">1:03</span>
+            <span class="sub">hours:min</span>
+          </div>
+        </div>
+
+        <div class="timeline" id="timeline-rows">
+          <!-- header -->
+          <div class="tl-row header">
+            <div class="tl-cell">time</div>
+            <div class="tl-cell">app</div>
+            <div class="tl-cell">title</div>
+            <div class="tl-cell" style="text-align:right">duration</div>
+            <div class="tl-cell" style="text-align:right">focus</div>
+          </div>
+          <!-- rows injected by JS -->
+        </div>
+      </div>
+
+      <!-- ── APPS section ── -->
+      <div class="section" id="s-apps">
+        <div class="panel-header">
+          <span class="panel-title">applications</span>
+          <span class="panel-subtitle">time distribution</span>
+        </div>
+        <div class="app-list" id="app-list-rows"></div>
+      </div>
+
+      <!-- ── HEATMAP section ── -->
+      <div class="section" id="s-heatmap">
+        <div class="panel-header">
+          <span class="panel-title">activity heatmap</span>
+          <span class="panel-subtitle">last 7 days × 24 hours</span>
+        </div>
+        <div class="heatmap-hours" id="hm-hour-labels"></div>
+        <div class="heatmap" id="heatmap-grid"></div>
+      </div>
+
+      <!-- ── LOG section ── -->
+      <div class="section" id="s-log">
+        <div class="panel-header">
+          <span class="panel-title">raw event log</span>
+          <span class="panel-subtitle">247 events today</span>
+          <div class="panel-controls">
+            <button class="btn active">focus</button>
+            <button class="btn">idle</button>
+            <button class="btn">all</button>
+          </div>
+        </div>
+        <div class="log-view" id="log-view"></div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /body -->
+
+  <!-- Statusbar -->
+  <div class="statusbar">
+    <div class="seg"><span class="dot"></span> recording</div>
+    <span class="sep">|</span>
+    <div class="seg">backend: hyprland</div>
+    <span class="sep">|</span>
+    <div class="seg">db: ~/.local/share/blackboxd/events.db</div>
+    <span class="sep">|</span>
+    <div class="seg">retention: forever</div>
+    <div class="seg ml" id="sb-event-count">247 events</div>
+  </div>
+
+</div><!-- /frame -->
+
+<script>
+// ── Mock data ──────────────────────────────────────────────────────────────
+
+const TODAY = new Date();
+const BASE  = new Date(TODAY);
+BASE.setHours(8, 32, 0, 0);
+const BASE_TS = BASE.getTime() / 1000;
+
+// Sessions: [offset_s, app, app_class, title, duration_s, focus]
+const SESSIONS = [
+  [0,    'Terminal',  'kitty',    'vim blackboxd/models.py',              1820, 'deep'],
+  [1820, 'Firefox',   'firefox',  'GitHub — blackboxd · PR #4',            420, 'shallow'],
+  [2240, 'Terminal',  'kitty',    'pytest tests/ -v --tb=short',           980, 'sustained'],
+  [null, null, null, null, 480, 'idle'],   // idle gap
+  [3700, 'Slack',     'slack',    '# engineering — 3 new messages',        240, 'glance'],
+  [3940, 'Terminal',  'kitty',    'vim blackboxd/storage/engine.py',      2100, 'deep'],
+  [6040, 'Firefox',   'firefox',  'SQLite WAL mode — official docs',       680, 'sustained'],
+  [6720, 'Obsidian',  'obsidian', 'Daily notes — 2026-04-09',              540, 'sustained'],
+  [null, null, null, null, 720, 'idle'],
+  [7980, 'Firefox',   'firefox',  'Hacker News',                           310, 'shallow'],
+  [8290, 'Terminal',  'kitty',    'git diff HEAD~1 | less',                820, 'sustained'],
+  [9110, 'Zed',       'zed',      'blackboxd/collectors/hyprland.py',     1650, 'deep'],
+  [null, null, null, null, 300, 'idle'],
+  [11060,'Firefox',   'firefox',  'Python 3.11 tomllib docs',              260, 'shallow'],
+  [11320,'Terminal',  'kitty',    'blackboxd --backend mock --verbose',    480, 'shallow'],
+  [11800,'Zed',       'zed',      'blackboxd/timeline/reconstructor.py',  1920, 'deep'],
+];
+
+// App totals (seconds)
+const APP_TOTALS = [
+  ['Terminal',  6100],
+  ['Zed',       3570],
+  ['Firefox',   1670],
+  ['Obsidian',   540],
+  ['Slack',      240],
+];
+
+// Log lines
+const LOG_LINES = [
+  ['08:32:00', 'window_focus',    'focus',  'kitty — vim blackboxd/models.py'],
+  ['08:32:01', 'window_focus',    'focus',  'kitt

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blackboxd"
+version = "0.1.0"
+description = "A privacy-first background service that reconstructs your day as a human-readable behavioral timeline."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    "tomllib; python_version < '3.11'",  # stdlib in 3.11+
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[project.scripts]
+blackboxd = "blackboxd.daemon:main"
+blackboxd-report = "blackboxd.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["blackboxd*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
