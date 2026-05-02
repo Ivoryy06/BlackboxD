@@ -13,9 +13,9 @@ from enum import Enum, auto
 from typing import Any
 
 
-# ---------------------------------------------------------------------------
-# Event kinds
-# ---------------------------------------------------------------------------
+
+
+
 
 class EventKind(str, Enum):
     """All event categories the system can record.
@@ -23,23 +23,23 @@ class EventKind(str, Enum):
     String-valued so they survive round-trips through SQLite without a
     lookup table.
     """
-    WINDOW_FOCUS     = "window_focus"      # active window changed
-    WINDOW_CLOSE     = "window_close"      # a window was closed
-    WINDOW_OPEN      = "window_open"       # a new window appeared
-    IDLE_START       = "idle_start"        # input stopped for threshold
-    IDLE_END         = "idle_end"          # input resumed
-    WORKSPACE_SWITCH = "workspace_switch"  # moved to a different workspace / virtual desktop
-    APP_LAUNCH       = "app_launch"        # application process started
-    APP_EXIT         = "app_exit"          # application process exited
-    LOCK_START       = "lock_start"        # screen locked
-    LOCK_END         = "lock_end"          # screen unlocked
-    DAEMON_START     = "daemon_start"      # blackboxd started recording
-    DAEMON_STOP      = "daemon_stop"       # blackboxd stopped recording
+    WINDOW_FOCUS     = "window_focus"      
+    WINDOW_CLOSE     = "window_close"      
+    WINDOW_OPEN      = "window_open"       
+    IDLE_START       = "idle_start"        
+    IDLE_END         = "idle_end"          
+    WORKSPACE_SWITCH = "workspace_switch"  
+    APP_LAUNCH       = "app_launch"        
+    APP_EXIT         = "app_exit"          
+    LOCK_START       = "lock_start"        
+    LOCK_END         = "lock_end"          
+    DAEMON_START     = "daemon_start"      
+    DAEMON_STOP      = "daemon_stop"       
 
 
-# ---------------------------------------------------------------------------
-# Raw event — what collectors emit
-# ---------------------------------------------------------------------------
+
+
+
 
 @dataclass(frozen=True, slots=True)
 class RawEvent:
@@ -61,9 +61,9 @@ class RawEvent:
         return cls(kind=kind, timestamp=time.time(), source=source, payload=payload)
 
 
-# ---------------------------------------------------------------------------
-# Normalized event — storage-ready, collector-agnostic
-# ---------------------------------------------------------------------------
+
+
+
 
 @dataclass(frozen=True, slots=True)
 class Event:
@@ -100,19 +100,19 @@ class Event:
         return datetime.datetime.fromtimestamp(self.timestamp).isoformat(timespec="seconds")
 
 
-# ---------------------------------------------------------------------------
-# Session — a contiguous block of activity in one app
-# ---------------------------------------------------------------------------
+
+
+
 
 class FocusQuality(str, Enum):
     """Rough classification of a session's focus depth.
 
     Thresholds are calibrated to typical knowledge-worker patterns.
     """
-    DEEP      = "deep"       # >25 min uninterrupted
-    SUSTAINED = "sustained"  # 10–25 min
-    SHALLOW   = "shallow"    # 3–10 min
-    GLANCE    = "glance"     # <3 min
+    DEEP      = "deep"       
+    SUSTAINED = "sustained"  
+    SHALLOW   = "shallow"    
+    GLANCE    = "glance"     
 
 
 @dataclass
@@ -139,7 +139,7 @@ class Session:
     workspace:      str | None         = None
     idle_gap_after: float | None       = None
 
-    # ---- derived --------------------------------------------------------
+    
 
     @property
     def duration(self) -> float:
@@ -150,7 +150,7 @@ class Session:
 
     @property
     def focus_quality(self) -> FocusQuality:
-        d = self.duration / 60  # minutes
+        d = self.duration / 60  
         if d >= 25:
             return FocusQuality.DEEP
         if d >= 10:
@@ -175,9 +175,9 @@ class Session:
         return f"{h}h {m:02d}m"
 
 
-# ---------------------------------------------------------------------------
-# Timeline — a reconstructed view of a time range
-# ---------------------------------------------------------------------------
+
+
+
 
 @dataclass
 class TimelineDay:

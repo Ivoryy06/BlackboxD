@@ -20,42 +20,42 @@ from pathlib import Path
 from typing import Any
 
 
-# ---------------------------------------------------------------------------
-# Default constants
-# ---------------------------------------------------------------------------
 
-DEFAULT_POLL_INTERVAL    = 1.0    # seconds between collector polls
-DEFAULT_IDLE_THRESHOLD   = 120    # seconds of inactivity before IDLE_START
-DEFAULT_SESSION_SPLIT    = 300    # idle gap (seconds) that splits sessions
-DEFAULT_TITLE_MAX_LEN    = 120    # truncate window titles at this length
+
+
+
+DEFAULT_POLL_INTERVAL    = 1.0    
+DEFAULT_IDLE_THRESHOLD   = 120    
+DEFAULT_SESSION_SPLIT    = 300    
+DEFAULT_TITLE_MAX_LEN    = 120    
 DEFAULT_DB_PATH          = "~/.local/share/blackboxd/events.db"
 DEFAULT_LOG_PATH         = "~/.local/share/blackboxd/blackboxd.log"
 
 
-# ---------------------------------------------------------------------------
-# Sub-configs
-# ---------------------------------------------------------------------------
+
+
+
 
 @dataclass
 class CollectorConfig:
     """Settings for the collector subsystem."""
 
-    # Which collector backend to use. "auto" = detect from environment.
+    
     backend: str = "auto"
 
-    # Seconds between active-window polls.
+    
     poll_interval: float = DEFAULT_POLL_INTERVAL
 
-    # Seconds of no input before an IDLE_START event fires.
+    
     idle_threshold: int = DEFAULT_IDLE_THRESHOLD
 
-    # Extra app names / classes to completely ignore (privacy filter).
+    
     ignore_apps: list[str] = field(default_factory=list)
 
-    # If True, window titles are never stored (only app names).
+    
     suppress_titles: bool = False
 
-    # If True, titles are hashed (SHA-256 truncated) instead of stored.
+    
     hash_titles: bool = False
 
 
@@ -66,10 +66,10 @@ class StorageConfig:
     db_path: Path = Path(DEFAULT_DB_PATH).expanduser()
     log_path: Path = Path(DEFAULT_LOG_PATH).expanduser()
 
-    # Maximum number of days to retain events (0 = forever).
+    
     retention_days: int = 0
 
-    # Flush WAL to main DB file after this many events.
+    
     wal_checkpoint_interval: int = 500
 
 
@@ -77,13 +77,13 @@ class StorageConfig:
 class TimelineConfig:
     """Settings for timeline reconstruction."""
 
-    # Idle gap (seconds) that starts a new session.
+    
     session_split_threshold: int = DEFAULT_SESSION_SPLIT
 
-    # Minimum session duration (seconds) to include in reports.
+    
     min_session_duration: int = 5
 
-    # Truncate window titles to this length in output.
+    
     title_max_length: int = DEFAULT_TITLE_MAX_LEN
 
 
@@ -95,7 +95,7 @@ class Config:
     storage:   StorageConfig   = field(default_factory=StorageConfig)
     timeline:  TimelineConfig  = field(default_factory=TimelineConfig)
 
-    # Source path (informational only).
+    
     _path: Path | None = field(default=None, repr=False, compare=False)
 
     @classmethod
@@ -118,9 +118,9 @@ class Config:
         return _parse(raw, resolved)
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+
+
+
 
 def _find_config_file() -> Path | None:
     xdg = os.environ.get("XDG_CONFIG_HOME", "~/.config")
@@ -138,7 +138,7 @@ def _read_toml(path: Path) -> dict | None:
         with open(path, "rb") as fh:
             return tomllib.load(fh)
     except FileNotFoundError:
-        return None  # ← was: raise
+        return None  
     except tomllib.TOMLDecodeError as exc:
         raise ValueError(f"Invalid TOML in {path}: {exc}") from exc
 
@@ -194,9 +194,9 @@ def _validate(
         )
 
 
-# ---------------------------------------------------------------------------
-# Example config generator (used by installer / first-run)
-# ---------------------------------------------------------------------------
+
+
+
 
 EXAMPLE_CONFIG = """\
 # blackboxd configuration

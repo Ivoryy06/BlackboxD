@@ -23,22 +23,22 @@ from blackboxd.models import Event, EventKind, RawEvent
 log = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Window-info snapshot — what every collector must be able to return
-# ---------------------------------------------------------------------------
+
+
+
 
 @dataclass(frozen=True, slots=True)
 class WindowInfo:
     """The currently focused window, as seen by the compositor / WM."""
-    app_name:  str | None   # human name, e.g. "Firefox"
-    app_class: str | None   # WM_CLASS or app-id, e.g. "firefox"
-    title:     str | None   # window title
-    workspace: str | None   # workspace / desktop identifier
+    app_name:  str | None   
+    app_class: str | None   
+    title:     str | None   
+    workspace: str | None   
 
 
-# ---------------------------------------------------------------------------
-# Abstract base collector
-# ---------------------------------------------------------------------------
+
+
+
 
 class BaseCollector(ABC):
     """Interface every collector backend must implement.
@@ -54,14 +54,14 @@ class BaseCollector(ABC):
     Or use as a context manager (calls setup/teardown automatically).
     """
 
-    NAME: str = "base"  # override in each subclass
+    NAME: str = "base"  
 
     def __init__(self, config: CollectorConfig) -> None:
         self.config = config
         self._last_window: WindowInfo | None = None
         self._idle_start_ts: float | None = None
 
-    # ---- lifecycle -------------------------------------------------------
+    
 
     def setup(self) -> None:
         """Called once before polling begins. Override to open connections."""
@@ -76,7 +76,7 @@ class BaseCollector(ABC):
     def __exit__(self, *_: object) -> None:
         self.teardown()
 
-    # ---- required API ----------------------------------------------------
+    
 
     @abstractmethod
     def get_active_window(self) -> WindowInfo | None:
@@ -90,7 +90,7 @@ class BaseCollector(ABC):
     def is_available(self) -> bool:
         """Return True if this backend can run in the current environment."""
 
-    # ---- polling ---------------------------------------------------------
+    
 
     def poll(self) -> Iterator[RawEvent]:
         """Produce zero or more RawEvents reflecting changes since last call.
@@ -105,11 +105,11 @@ class BaseCollector(ABC):
         window = self.get_active_window()
         idle   = self.get_idle_seconds()
 
-        # --- idle detection ---
+        
         if idle >= self.config.idle_threshold:
             if self._idle_start_ts is None:
-                # Transition: active → idle
-                self._idle_start_ts = now_ts - idle  # backdate to actual start
+                
+                self._idle_start_ts = now_ts - idle  
                 yield RawEvent(
                     kind=EventKind.IDLE_START,
                     timestamp=self._idle_start_ts,
@@ -118,7 +118,7 @@ class BaseCollector(ABC):
                 )
         else:
             if self._idle_start_ts is not None:
-                # Transition: idle → active
+                
                 duration = now_ts - self._idle_start_ts
                 self._idle_start_ts = None
                 yield RawEvent(
@@ -128,9 +128,9 @@ class BaseCollector(ABC):
                     payload={"idle_seconds": duration},
                 )
 
-        # --- window-focus detection ---
+        
         if self._idle_start_ts is not None:
-            # Don't emit focus events while idle
+            
             return
 
         if window is not None and window != self._last_window:
@@ -156,9 +156,9 @@ class BaseCollector(ABC):
         return name in ignore or klass in ignore
 
 
-# ---------------------------------------------------------------------------
-# Normalizer: RawEvent → Event
-# ---------------------------------------------------------------------------
+
+
+
 
 class Normalizer:
     """Converts raw collector events into canonical Event objects.

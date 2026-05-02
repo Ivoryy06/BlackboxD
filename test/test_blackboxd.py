@@ -30,9 +30,9 @@ from blackboxd.timeline.reconstructor import Reconstructor
 from blackboxd.timeline.renderer import TextRenderer
 
 
-# ---------------------------------------------------------------------------
-# Fixtures
-# ---------------------------------------------------------------------------
+
+
+
 
 @pytest.fixture
 def tmp_db(tmp_path: Path) -> Path:
@@ -62,9 +62,9 @@ def mock_collector(collector_config: CollectorConfig) -> MockCollector:
     return MockCollector(collector_config, frozen=True)
 
 
-# ---------------------------------------------------------------------------
-# Model tests
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestEventKind:
     def test_string_values(self):
@@ -137,9 +137,9 @@ class TestSession:
         assert s.primary_title == "Title B"
 
 
-# ---------------------------------------------------------------------------
-# Config tests
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestConfig:
     def test_defaults(self):
@@ -187,9 +187,9 @@ class TestConfig:
         assert "[collector]" in out.read_text()
 
 
-# ---------------------------------------------------------------------------
-# Storage tests
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestStorageEngine:
     def _event(self, kind=EventKind.WINDOW_FOCUS, ts=1000.0) -> Event:
@@ -295,9 +295,9 @@ class TestStorageEngine:
         e2 = StorageEngine(tmp_db); e2.open(); e2.close()
 
 
-# ---------------------------------------------------------------------------
-# Normalizer tests
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestNormalizer:
     def _raw(self, **kwargs) -> RawEvent:
@@ -339,9 +339,9 @@ class TestNormalizer:
         assert event.idle_seconds == pytest.approx(130.5)
 
 
-# ---------------------------------------------------------------------------
-# Mock collector tests
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestMockCollector:
     def test_is_available(self, collector_config):
@@ -367,9 +367,9 @@ class TestMockCollector:
         assert not mc._is_ignored(WindowInfo("Terminal", "kitty", "bash", "1"))
 
 
-# ---------------------------------------------------------------------------
-# Reconstructor tests
-# ---------------------------------------------------------------------------
+
+
+
 
 BASE_TS = datetime.datetime(2025, 6, 15, 9, 0, 0).timestamp()
 
@@ -481,9 +481,9 @@ class TestReconstructor:
         assert reconstructor.build_days([]) == []
 
 
-# ---------------------------------------------------------------------------
-# Renderer tests
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestTextRenderer:
     def _day(self) -> TimelineDay:
@@ -526,9 +526,9 @@ class TestTextRenderer:
         assert "\033[" not in TextRenderer(color=False).render_day(day)
 
 
-# ---------------------------------------------------------------------------
-# End-to-end
-# ---------------------------------------------------------------------------
+
+
+
 
 class TestEndToEnd:
     def test_full_pipeline(self, tmp_db, collector_config):

@@ -17,7 +17,7 @@ from blackboxd.config import CollectorConfig
 from blackboxd.models import RawEvent
 
 
-# A "script" entry: (offset_seconds_from_start, WindowInfo or None, idle_seconds)
+
 ScriptEntry = tuple[float, WindowInfo | None, float]
 
 
@@ -27,11 +27,11 @@ DEFAULT_SCRIPT: list[ScriptEntry] = [
     (90,   WindowInfo("Terminal",   "kitty",       "vim models.py",           "1"), 0),
     (200,  WindowInfo("Slack",      "slack",       "# general",               "1"), 0),
     (260,  WindowInfo("Terminal",   "kitty",       "vim models.py",           "1"), 0),
-    (900,  WindowInfo("Terminal",   "kitty",       "vim models.py",           "1"), 180),  # idle 3m
+    (900,  WindowInfo("Terminal",   "kitty",       "vim models.py",           "1"), 180),  
     (1080, WindowInfo("Firefox",    "firefox",     "Hacker News",             "2"), 0),
     (1200, WindowInfo("Obsidian",   "obsidian",    "Daily notes",             "2"), 0),
     (1800, WindowInfo("Terminal",   "kitty",       "pytest -v",               "1"), 0),
-    (2100, None,                                                                    600),  # long idle
+    (2100, None,                                                                    600),  
     (2700, WindowInfo("Firefox",    "firefox",     "MDN — Python docs",       "1"), 0),
 ]
 
@@ -67,9 +67,9 @@ class MockCollector(BaseCollector):
     def is_available(self) -> bool:
         return True
 
-    # ------------------------------------------------------------------ #
-    # Clock                                                                #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     @property
     def _elapsed(self) -> float:
@@ -81,9 +81,9 @@ class MockCollector(BaseCollector):
     def _now_ts(self) -> float:
         return self._start_ts + self._elapsed
 
-    # ------------------------------------------------------------------ #
-    # BaseCollector API                                                    #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def get_active_window(self) -> WindowInfo | None:
         entry = self._current_entry()
@@ -93,13 +93,13 @@ class MockCollector(BaseCollector):
         entry = self._current_entry()
         return entry[2] if entry else 0.0
 
-    # ------------------------------------------------------------------ #
-    # Scripted replay                                                      #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def _current_entry(self) -> ScriptEntry | None:
         elapsed = self._elapsed
-        # Find the last script entry whose offset has been passed
+        
         active: ScriptEntry | None = None
         for entry in self._script:
             if entry[0] <= elapsed:
@@ -108,9 +108,9 @@ class MockCollector(BaseCollector):
                 break
         return active
 
-    # ------------------------------------------------------------------ #
-    # Convenience: emit all events at once (for tests)                    #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def replay_all(self, base_ts: float | None = None) -> Iterator[RawEvent]:
         """Yield all scripted events without sleeping, using provided timestamps."""

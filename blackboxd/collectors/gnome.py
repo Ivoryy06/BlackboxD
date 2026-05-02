@@ -28,14 +28,14 @@ log = logging.getLogger(__name__)
 class GNOMECollector(BaseCollector):
     NAME = "gnome"
 
-    # ---- availability ----------------------------------------------------
+    
 
     def is_available(self) -> bool:
         if os.environ.get("XDG_CURRENT_DESKTOP", "").upper() not in ("GNOME", "UBUNTU:GNOME"):
             return False
         return _command_exists("gdbus")
 
-    # ---- active window ---------------------------------------------------
+    
 
     def get_active_window(self) -> WindowInfo | None:
         """
@@ -59,7 +59,7 @@ class GNOMECollector(BaseCollector):
 
         import json
         try:
-            # gdbus returns strings wrapped in extra quotes/escaping
+            
             cleaned = raw.strip().strip("'").replace('\\"', '"')
             data: dict[str, Any] = json.loads(cleaned)
         except (json.JSONDecodeError, ValueError) as exc:
@@ -77,7 +77,7 @@ class GNOMECollector(BaseCollector):
             workspace = workspace,
         )
 
-    # ---- idle time -------------------------------------------------------
+    
 
     def get_idle_seconds(self) -> float:
         """
@@ -94,7 +94,7 @@ class GNOMECollector(BaseCollector):
         if result is None:
             return 0.0
 
-        # gdbus output: "(uint64 123456,)\n"
+        
         match = re.search(r"\((?:uint64\s+)?(\d+),?\)", result)
         if not match:
             return 0.0
@@ -102,9 +102,9 @@ class GNOMECollector(BaseCollector):
         return ms / 1000.0
 
 
-# ---------------------------------------------------------------------------
-# gdbus helpers
-# ---------------------------------------------------------------------------
+
+
+
 
 def _gdbus_eval(script: str) -> str | None:
     """Call org.gnome.Shell.Eval with *script*, return the result string."""

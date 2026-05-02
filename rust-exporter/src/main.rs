@@ -1,12 +1,12 @@
-/// blackboxd-export — high-performance exporter for BlackboxD event data
-///
-/// Reads from the SQLite store written by the Python daemon and exports
-/// to JSON or CSV.
-///
-/// Usage:
-///   blackboxd-export --format json --output activity.json
-///   blackboxd-export --format csv  --output activity.csv
-///   blackboxd-export --format json --since 1700000000 --until 1700086400
+
+
+
+
+
+
+
+
+
 
 use clap::{Parser, ValueEnum};
 use rusqlite::{Connection, OpenFlags};
@@ -16,23 +16,23 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "blackboxd-export", about = "Export BlackboxD activity data")]
 struct Cli {
-    /// Output format
+    
     #[arg(short, long, default_value = "json")]
     format: Format,
 
-    /// Output file (default: stdout)
+    
     #[arg(short, long)]
     output: Option<PathBuf>,
 
-    /// Only events after this Unix timestamp
+    
     #[arg(long)]
     since: Option<f64>,
 
-    /// Only events before this Unix timestamp
+    
     #[arg(long)]
     until: Option<f64>,
 
-    /// Path to the SQLite database
+    
     #[arg(long, env = "BLACKBOXD_DB")]
     db: Option<PathBuf>,
 }

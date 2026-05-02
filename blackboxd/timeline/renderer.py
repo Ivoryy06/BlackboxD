@@ -16,7 +16,7 @@ from io import StringIO
 from blackboxd.models import FocusQuality, Session, TimelineDay
 
 
-# Focus-quality glyphs (no emoji — terminals may not support them)
+
 QUALITY_SYMBOL = {
     FocusQuality.DEEP:      "■■■■",
     FocusQuality.SUSTAINED: "■■■░",
@@ -39,9 +39,9 @@ class TextRenderer:
         self.width = width
         self.color = color
 
-    # ------------------------------------------------------------------ #
-    # Public API                                                           #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def render_day(self, day: TimelineDay) -> str:
         buf = StringIO()
@@ -66,9 +66,9 @@ class TextRenderer:
             buf.write(day.summary_line() + "\n")
         return buf.getvalue()
 
-    # ------------------------------------------------------------------ #
-    # Internal rendering helpers                                           #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def _day_header(self, buf: StringIO, day: TimelineDay) -> None:
         d = datetime.date.fromisoformat(day.date)
@@ -136,9 +136,9 @@ class TextRenderer:
             buf.write(f"  {_truncate(app, 14).ljust(14)}  {bar}  {mins:4d}m\n")
         buf.write("\n")
 
-    # ------------------------------------------------------------------ #
-    # Terminal color helpers                                               #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def _bold(self, text: str) -> str:
         return f"\033[1m{text}\033[0m" if self.color else text
@@ -147,9 +147,9 @@ class TextRenderer:
         return f"\033[2m{text}\033[0m" if self.color else text
 
 
-# ---------------------------------------------------------------------------
-# Utility
-# ---------------------------------------------------------------------------
+
+
+
 
 def _truncate(s: str, n: int) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
