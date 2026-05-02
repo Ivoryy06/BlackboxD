@@ -36,9 +36,9 @@ class Reconstructor:
     def __init__(self, config: TimelineConfig) -> None:
         self.config = config
 
-    # ------------------------------------------------------------------ #
-    # Public API                                                           #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def build_sessions(self, events: Sequence[Event]) -> list[Session]:
         """Build an ordered list of Sessions from *events* (must be sorted by timestamp)."""
@@ -51,24 +51,24 @@ class Reconstructor:
                 app_name  = event.app_name  or app_class
 
                 if current is None:
-                    # First focus event — open a session
+                    
                     current = _open(event)
 
                 elif app_class != current.app_class:
-                    # App switch — close current, open new
+                    
                     current.end = event.timestamp
                     _maybe_keep(current, sessions, self.config.min_session_duration)
                     current = _open(event)
 
                 else:
-                    # Same app — just record the new title
+                    
                     if event.window_title and event.window_title not in current.titles:
                         current.titles.append(event.window_title)
 
             elif event.kind == EventKind.IDLE_END:
                 idle_secs = event.idle_seconds or 0.0
                 if idle_secs >= self.config.session_split_threshold and current is not None:
-                    # Long idle → close the session that preceded the idle gap
+                    
                     idle_start = event.timestamp - idle_secs
                     current.end = idle_start
                     current.idle_gap_after = idle_secs
@@ -81,7 +81,7 @@ class Reconstructor:
                     _maybe_keep(current, sessions, self.config.min_session_duration)
                     current = None
 
-        # Close any still-open session
+        
         if current is not None:
             import time
             current.end = time.time()
@@ -93,7 +93,7 @@ class Reconstructor:
         """Aggregate *sessions* into a TimelineDay for *date* (YYYY-MM-DD)."""
         day = TimelineDay(date=date)
 
-        # Only include sessions that overlap with this date
+        
         day_start, day_end = _day_bounds(date)
         day_sessions = [
             s for s in sessions
@@ -126,7 +126,7 @@ class Reconstructor:
         if not sessions:
             return []
 
-        # Collect all dates spanned by the sessions
+        
         dates: set[str] = set()
         for s in sessions:
             d = datetime.date.fromtimestamp(s.start).isoformat()
@@ -135,7 +135,7 @@ class Reconstructor:
                 d_end = datetime.date.fromtimestamp(s.end).isoformat()
                 dates.add(d_end)
 
-        # Filter by requested range
+        
         if since:
             dates = {d for d in dates if d >= since.isoformat()}
         if until:
@@ -144,9 +144,9 @@ class Reconstructor:
         return [self.build_day(sessions, d) for d in sorted(dates)]
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+
+
+
 
 def _open(event: Event) -> Session:
     s = Session(

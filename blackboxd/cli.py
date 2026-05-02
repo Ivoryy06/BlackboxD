@@ -37,7 +37,7 @@ def _serve_dashboard(engine, port: int) -> None:
         return d
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *_): pass  # silence request logs
+        def log_message(self, *_): pass  
 
         def _json(self, data):
             body = json.dumps(data).encode()
@@ -89,7 +89,7 @@ def _serve_dashboard(engine, port: int) -> None:
     """Bake all events into dashboard.html and write a self-contained file."""
     import dataclasses
 
-    here = Path(__file__).parent.parent  # repo root
+    here = Path(__file__).parent.parent  
     template = here / "dashboard.html"
     if not template.exists():
         print(f"dashboard.html not found at {template}", file=sys.stderr)
@@ -121,7 +121,7 @@ def _serve_dashboard(engine, port: int) -> None:
     dest.write_text(html)
     print(f"Dashboard written to {dest}")
 
-    # open in browser if not just exporting to a path
+    
     if output is None:
         import webbrowser
         webbrowser.open(dest.resolve().as_uri())
@@ -175,7 +175,7 @@ def main() -> None:
             print("No events recorded yet. Is blackboxd running?", file=sys.stderr)
             sys.exit(0)
 
-        # Determine time range
+        
         today = datetime.date.today()
         if args.date:
             since_date = datetime.date.fromisoformat(args.date)

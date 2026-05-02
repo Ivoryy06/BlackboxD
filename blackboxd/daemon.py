@@ -42,9 +42,9 @@ class Daemon:
         self._running = False
         self._engine: StorageEngine | None = None
 
-    # ------------------------------------------------------------------ #
-    # Lifecycle                                                            #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def start(self) -> None:
         """Open storage, register signal handlers, run the poll loop."""
@@ -87,9 +87,9 @@ class Daemon:
             self._engine.close()
             log.info("blackboxd stopped.")
 
-    # ------------------------------------------------------------------ #
-    # Poll loop                                                            #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def _loop(self, collector: object, normalizer: Normalizer) -> None:
         from blackboxd.collectors.base import BaseCollector
@@ -115,14 +115,14 @@ class Daemon:
             except Exception as exc:
                 log.warning("Collector error: %s", exc, exc_info=True)
 
-            # Sleep for the remainder of the interval
+            
             elapsed = time.monotonic() - tick_start
             sleep_for = max(0.0, interval - elapsed)
             time.sleep(sleep_for)
 
-    # ------------------------------------------------------------------ #
-    # Helpers                                                              #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def _store(self, event: Event) -> int:
         assert self._engine is not None
@@ -143,9 +143,9 @@ class Daemon:
         self._running = False
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
+
+
+
 
 def main() -> None:
     import argparse
@@ -184,9 +184,9 @@ def main() -> None:
     Daemon(config).start()
 
 
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
+
+
+
 
 def _configure_logging(log_path: Path) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)

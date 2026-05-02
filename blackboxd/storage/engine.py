@@ -80,9 +80,9 @@ class StorageEngine:
         self._conn: sqlite3.Connection | None = None
         self._pending_writes: int = 0
 
-    # ------------------------------------------------------------------ #
-    # Lifecycle                                                            #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def open(self) -> None:
         """Open the database, run migrations, configure pragmas."""
@@ -123,9 +123,9 @@ class StorageEngine:
     def __exit__(self, *_: object) -> None:
         self.close()
 
-    # ------------------------------------------------------------------ #
-    # Writes                                                               #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def append(self, event: Event) -> int:
         """Insert one event. Returns the assigned row id."""
@@ -148,7 +148,7 @@ class StorageEngine:
                 event.idle_seconds,
             ),
         )
-        row_id: int = cur.lastrowid  # type: ignore[assignment]
+        row_id: int = cur.lastrowid  
 
         self._pending_writes += 1
         if self._pending_writes >= self._wal_checkpoint_interval:
@@ -179,9 +179,9 @@ class StorageEngine:
                 ],
             )
 
-    # ------------------------------------------------------------------ #
-    # Reads                                                                #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def query(
         self,
@@ -232,9 +232,9 @@ class StorageEngine:
             return None
         return float(row[0]), float(row[1])
 
-    # ------------------------------------------------------------------ #
-    # Maintenance                                                          #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def purge_before(self, timestamp: float) -> int:
         """Delete all events older than *timestamp*. Returns deleted count."""
@@ -245,9 +245,9 @@ class StorageEngine:
         log.info("Purged %d events before ts=%.0f", deleted, timestamp)
         return deleted
 
-    # ------------------------------------------------------------------ #
-    # Internals                                                            #
-    # ------------------------------------------------------------------ #
+    
+    
+    
 
     def _require_conn(self) -> sqlite3.Connection:
         if self._conn is None:
@@ -271,16 +271,16 @@ class StorageEngine:
         current = int(row["value"]) if row else 0
 
         if current < 1:
-            # Version 1: initial schema (already created above).
+            
             cur.execute(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '1')"
             )
             log.info("Migrated schema to version 1.")
 
 
-# ---------------------------------------------------------------------------
-# Row → Event conversion
-# ---------------------------------------------------------------------------
+
+
+
 
 def _row_to_event(row: sqlite3.Row) -> Event:
     return Event(

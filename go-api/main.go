@@ -1,11 +1,11 @@
-// blackboxd-api — HTTP API server for BlackboxD
-// Reads from the SQLite event store written by the Python daemon.
-// Endpoints:
-//   GET  /api/events          ?since=<unix>&until=<unix>&limit=<n>
-//   GET  /api/events/latest   ?n=<count>
-//   GET  /api/stats
-//   POST /api/refresh         (called by the Lua listener on workspace events)
-//   GET  /api/health
+
+
+
+
+
+
+
+
 
 package main
 
@@ -164,7 +164,7 @@ func main() {
 	r.GET("/api/events/latest", latestEvents)
 	r.GET("/api/stats", stats)
 	r.POST("/api/refresh", func(c *gin.Context) {
-		// Called by the Lua listener on workspace events — just acknowledge.
+		
 		c.JSON(http.StatusOK, gin.H{"ok": true, "ts": time.Now().Unix()})
 	})
 	r.GET("/api/health", func(c *gin.Context) {

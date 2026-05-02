@@ -23,7 +23,7 @@ from blackboxd.config import CollectorConfig
 
 log = logging.getLogger(__name__)
 
-# Map of backend name → module + class name (lazy imports)
+
 _REGISTRY: dict[str, tuple[str, str]] = {
     "mock":     ("blackboxd.collectors.mock",      "MockCollector"),
     "hyprland": ("blackboxd.collectors.hyprland",  "HyprlandCollector"),
@@ -52,9 +52,9 @@ def list_available() -> list[str]:
     return list(_REGISTRY.keys())
 
 
-# ---------------------------------------------------------------------------
-# Internals
-# ---------------------------------------------------------------------------
+
+
+
 
 def _auto_detect(config: CollectorConfig) -> BaseCollector:
     for name in _AUTO_ORDER:
