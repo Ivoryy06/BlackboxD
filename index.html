@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="blackboxd: a flight recorder for your computer. See where your day went without slowing the machine down.">
 <title>blackboxd</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -20,17 +23,27 @@ html{scroll-behavior:smooth}
   --blue:#8fb3c9;
   --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
   --serif:Georgia,"Times New Roman",serif;
+  --hand:'Caveat',"Segoe Print","Bradley Hand",cursive;
 }
 body{font-family:var(--mono);background:var(--bg);color:var(--ink);min-height:100vh;font-size:13px;line-height:1.6}
+/* a little paper grain so it doesn't feel like a flat screen */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.07;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 a{color:var(--accent)}
-.frame{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;max-width:1100px;margin:0 auto;padding:0 24px}
+.frame{position:relative;z-index:1;display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;max-width:1100px;margin:0 auto;padding:0 24px}
 
 /* header */
-.titlebar{display:flex;align-items:flex-end;gap:16px;padding:34px 0 14px;border-bottom:3px double var(--rule)}
+.titlebar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px 22px;padding:34px 0 14px;border-bottom:3px double var(--rule)}
 .tb-title{font-family:var(--serif);font-size:34px;font-style:italic;font-weight:400;line-height:1;color:var(--ink)}
 .tb-title::after{content:"";display:inline-block;width:9px;height:9px;margin-left:8px;background:var(--accent)}
+body.offline .tb-title::after{background:var(--muted)}
 .tb-sub{margin-top:6px;font-size:12px;color:var(--muted)}
+.margin-note{display:flex;align-items:center;gap:6px;font-family:var(--hand);font-size:20px;line-height:1.1;color:var(--accent);transform:rotate(-2deg);padding-bottom:2px}
+.margin-note svg{width:34px;height:20px;flex-shrink:0}
 .tb-status{margin-left:auto;font-size:12px;color:var(--muted)}
+
+/* demo banner */
+.demo-banner{margin-bottom:16px;padding:8px 12px;border:1px dashed var(--accent);color:var(--ink)}
+.demo-banner button{margin-left:10px}
 
 /* layout */
 .body{display:grid;grid-template-columns:190px 1fr;gap:36px;padding:26px 0 30px;align-items:start}
@@ -44,16 +57,16 @@ a{color:var(--accent)}
 .nav-item.active{color:var(--accent)}
 .nav-item.active::before{content:"\203A";position:absolute;left:3px}
 .nav-badge{margin-left:8px;font-size:11px;color:var(--muted)}
-.sidebar-divider{display:none}
 .stat-row{display:flex;justify-content:space-between;gap:10px;padding:2px 0;border-bottom:1px dotted var(--rule)}
 .stat-row .sk{color:var(--muted)}
 .stat-row .sv{color:var(--ink)}
 .stat-row .sv.green{color:var(--ok)}
 .stat-row .sv.amber{color:var(--warn)}
+.keys{margin-top:22px;font-family:var(--hand);font-size:18px;line-height:1.2;color:var(--muted);transform:rotate(-1.5deg)}
 
 /* main */
 .main{display:flex;flex-direction:column;min-width:0}
-.card{display:flex;flex-direction:column;gap:20px;border-top:2px solid var(--ink);padding-top:14px}
+.card{display:flex;flex-direction:column;gap:18px;border-top:2px solid var(--ink);padding-top:14px}
 .panel-header{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px}
 .panel-title{font-family:var(--serif);font-size:24px;font-weight:400;color:var(--ink)}
 .panel-subtitle{color:var(--muted)}
@@ -61,6 +74,12 @@ a{color:var(--accent)}
 .btn{font:inherit;background:none;border:0;border-bottom:1px solid transparent;color:var(--muted);padding:1px 0;cursor:pointer}
 .btn:hover{color:var(--ink)}
 .btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.linkbtn{font:inherit;background:none;border:0;border-bottom:1px solid var(--muted);color:var(--ink);padding:0;cursor:pointer}
+.linkbtn:hover{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* plain-english summary */
+.day-summary{font-family:var(--serif);font-size:19px;line-height:1.5;max-width:42em}
+.legend{font-size:11px;color:var(--muted);margin-top:-6px}
 
 /* stats */
 .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
@@ -127,11 +146,16 @@ a{color:var(--accent)}
 .log-kind.switch{color:var(--ok)}
 .log-body{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* notes: ruled like a notebook page */
+.hint{color:var(--muted);margin-top:-6px}
+#note-text{width:100%;min-height:280px;resize:vertical;font:inherit;line-height:28px;color:var(--ink);background-color:transparent;background-image:repeating-linear-gradient(transparent 0 27px,var(--rule) 27px 28px);border:0;border-left:2px solid var(--accent);padding:0 0 0 14px;outline:none}
+#note-text:focus-visible{outline:1px dotted var(--accent);outline-offset:6px}
+.note-status{font-family:var(--hand);font-size:18px;color:var(--muted);min-height:1.2em}
+
 /* status bar */
 .statusbar{border-top:1px solid var(--rule);padding:10px 0 18px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font-size:11px;color:var(--muted)}
 .statusbar .dot{display:inline-block;width:7px;height:7px;margin-right:6px;background:var(--ok)}
 .statusbar .dot.red{background:var(--accent)}
-.statusbar .sep{display:none}
 .statusbar .ml{margin-left:auto}
 
 /* sections */
@@ -148,6 +172,8 @@ a{color:var(--accent)}
 .gate-step-label{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin-top:6px}
 .gate-cmd{background:var(--panel);padding:10px 14px;color:var(--ok);white-space:pre;overflow-x:auto}
 .gate-retry{font-size:11px;color:var(--muted)}
+.gate-promise{font-family:var(--hand);font-size:22px;line-height:1.15;color:var(--accent);transform:rotate(-1deg)}
+.gate-demo{align-self:flex-start}
 
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -157,21 +183,28 @@ a{color:var(--accent)}
   .frame{padding:0 16px}
   .body{grid-template-columns:1fr;gap:18px}
   .sidebar{position:static}
+  .keys{display:none}
   .stats-bar{grid-template-columns:1fr 1fr;row-gap:16px}
   .stat-cell:nth-child(3){border-left:0;padding-left:0}
   .tl-row{grid-template-columns:56px 1fr 130px 60px}
   .tl-title{display:none}
   .app-row{grid-template-columns:100px 1fr 60px}
   .log-kind{width:100px}
+  .margin-note{display:none}
 }
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.app-bar-fill{transition:none}}
 </style>
 </head>
-<body>
+<body class="offline">
 <div class="frame">
   <div class="titlebar">
     <div>
       <div class="tb-title">blackboxd</div>
       <div class="tb-sub">activity recorder v0.1.0</div>
+    </div>
+    <div class="margin-note">
+      <svg viewBox="0 0 34 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 12C24 17 13 17 5 8"/><path d="M4 14L5 7l7 1"/></svg>
+      <span>that's the recording light</span>
     </div>
     <div class="tb-status"><span id="live-time">--:--:--</span></div>
   </div>
@@ -183,6 +216,7 @@ a{color:var(--accent)}
       <div class="nav-item" onclick="showSection('apps',this)">apps<span class="nav-badge" id="nb-apps">—</span></div>
       <div class="nav-item" onclick="showSection('heatmap',this)">heatmap</div>
       <div class="nav-item" onclick="showSection('log',this)">raw log<span class="nav-badge" id="nb-log">—</span></div>
+      <div class="nav-item" onclick="showSection('notes',this)">notes</div>
       <div class="sidebar-label">today</div>
       <div class="stat-row"><span class="sk">active</span><span class="sv green" id="sb-active">—</span></div>
       <div class="stat-row"><span class="sk">idle</span><span class="sv" id="sb-idle">—</span></div>
@@ -192,14 +226,18 @@ a{color:var(--accent)}
       <div class="sidebar-label">daemon</div>
       <div class="stat-row"><span class="sk">status</span><span class="sv" id="sb-status">connecting…</span></div>
       <div class="stat-row"><span class="sk">db</span><span class="sv" id="sb-db">—</span></div>
+      <div class="keys">keys 1 to 5 jump between views</div>
     </div>
 
     <div class="main" id="main-panel">
+
+      <div class="demo-banner" id="demo-banner" hidden>Sample data. None of this is real activity.<button class="linkbtn" onclick="exitDemo()">back to the real thing</button></div>
 
       <div id="offline-gate">
         <div class="gate-card">
           <div class="gate-title">Start BlackboxD first</div>
           <div class="gate-sub">The backend isn't running. Start it on your own machine and this page will find it by itself.</div>
+          <div class="gate-promise">this page only talks to localhost:8080. nothing gets uploaded.</div>
           <div class="gate-steps">
             <div class="gate-step-label">1. install</div>
             <div class="gate-cmd">git clone https://github.com/Ivoryy06/BlackboxD.git
@@ -210,6 +248,7 @@ cd BlackboxD && chmod +x install.sh && ./install.sh</div>
             <div class="gate-cmd">cd go-api && ./blackboxd-api</div>
           </div>
           <div class="gate-retry">Looking for the backend every 5 seconds.</div>
+          <button class="linkbtn gate-demo" onclick="enterDemo()">or look around with sample data first</button>
         </div>
       </div>
 
@@ -224,6 +263,7 @@ cd BlackboxD && chmod +x install.sh && ./install.sh</div>
               <button class="btn" onclick="setFilter('idle',this)">idle</button>
             </div>
           </div>
+          <p class="day-summary" id="day-summary"></p>
           <div class="stats-bar">
             <div class="stat-cell"><span class="label">active</span><span class="value green" id="sc-active">—</span><span class="sub">hours:min</span></div>
             <div class="stat-cell"><span class="label">deep sessions</span><span class="value" id="sc-deep">—</span><span class="sub">25 min or more, unbroken</span></div>
@@ -236,6 +276,7 @@ cd BlackboxD && chmod +x install.sh && ./install.sh</div>
               <div class="tl-cell">duration</div><div class="tl-cell">focus</div>
             </div>
           </div>
+          <p class="legend">glance: under 1 min. shallow: 1 to 5 min. sustained: 5 to 25 min. deep: 25 min or more without switching.</p>
         </div>
       </div>
 
@@ -268,18 +309,27 @@ cd BlackboxD && chmod +x install.sh && ./install.sh</div>
           <div class="log-view" id="log-view"></div>
         </div>
       </div>
+
+      <div class="section" id="s-notes">
+        <div class="card">
+          <div class="panel-header"><span class="panel-title">Notes</span><span class="panel-subtitle">for today</span></div>
+          <p class="hint">Things worth remembering. Saved only in this browser, one note per day.</p>
+          <textarea id="note-text" aria-label="Notes for today" placeholder="what were you actually trying to get done?"></textarea>
+          <span class="note-status" id="note-status"></span>
+        </div>
+      </div>
     </div>
   </div>
 
   <div class="statusbar">
-    <div class="seg"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></div>
+    <div class="seg"><span class="dot red" id="status-dot"></span><span id="status-text">connecting…</span></div>
     <div class="seg" id="sb-db-path">db: —</div>
-    <div class="seg ml"><span id="sb-event-count">— events</span> · <a href="https://github.com/Ivoryy06/BlackboxD">source</a></div>
+    <div class="seg ml"><span id="sb-event-count">— events</span> · v0.1, expect rough edges · <a href="https://github.com/Ivoryy06/BlackboxD">source</a></div>
   </div>
 </div>
 <script>
 const API = 'http://localhost:8080';
-let allEvents = [], connected = false, tlFilter = 'all', logFilter = 'all';
+let allEvents = [], heatEvents = null, connected = false, demo = false, tlFilter = 'all', logFilter = 'all';
 
 // ── utils ──
 function fmtTime(ts){ const d=new Date(ts*1000); return d.toTimeString().slice(0,8); }
@@ -290,9 +340,11 @@ function fmtDur(s){
 }
 function fmtHM(s){ return Math.floor(s/3600)+':'+String(Math.floor((s%3600)/60)).padStart(2,'0'); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+const longDate = d => d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
 // ── connection detection ──
 async function tryConnect(){
+  if(demo) return;
   try {
     const r = await fetch(API+'/api/health', {signal: AbortSignal.timeout(2000)});
     if(!r.ok) throw new Error();
@@ -308,6 +360,7 @@ function setConnected(ok, dbPath){
   connected = ok;
   const gate = document.getElementById('offline-gate');
   const sections = document.querySelectorAll('.section');
+  document.body.classList.toggle('offline', !ok);
   if(ok){
     gate.classList.remove('visible');
     sections.forEach(s=>s.style.display='');
@@ -338,9 +391,59 @@ async function loadData(){
 
   document.getElementById('sb-event-count').textContent = stats.total_events+' total events';
   document.getElementById('nb-log').textContent = allEvents.length;
-  document.getElementById('tl-date-label').textContent = today.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('tl-date-label').textContent = longDate(today);
 
   renderAll();
+}
+
+// ── demo mode: sample data so the page can be looked at without installing anything ──
+function makeDemo(){
+  let seed = 7;
+  const rnd = () => { seed = (seed*1664525 + 1013904223) % 4294967296; return seed/4294967296; };
+  const now = Math.floor(Date.now()/1000);
+  const plan = [
+    [38,'Code','blackboxd — listener.py'], [6,'Firefox','Rust docs: std::fs'], [52,'Code','blackboxd — dashboard'],
+    ['idle',9], [4,'Terminal','cargo build --release'], [27,'Firefox','Stack Overflow'], [3,'Spotify','Liked songs'],
+    [31,'Code','go-api — main.go'], ['idle',14], [5,'Discord','general'], [44,'Obsidian','notes: week 41'], [8,'Firefox','GitHub'],
+    [2,'Terminal','git status'], [19,'Code','rust-exporter — lib.rs']
+  ];
+  const total = plan.reduce((a,p)=>a+(p[0]==='idle'?p[1]:p[0]),0)*60;
+  let t = now - total, today = [];
+  for(const p of plan){
+    if(p[0]==='idle'){ today.push({kind:'idle_start',timestamp:t,idle_seconds:p[1]*60}); t += p[1]*60; today.push({kind:'idle_end',timestamp:t}); }
+    else { today.push({kind:'window_focus',app_name:p[1],window_title:p[2],timestamp:t}); t += p[0]*60; }
+  }
+  const week = [...today];
+  for(let d=1; d<=6; d++){
+    for(let h=8; h<=23; h++){
+      const n = Math.floor(rnd()*rnd()*(h>=9&&h<=18?40:18));
+      for(let i=0;i<n;i++) week.push({kind:'window_focus',app_name:'x',timestamp:now - d*86400 - (now%86400) + h*3600 + i});
+    }
+  }
+  return {today, week};
+}
+function enterDemo(){
+  demo = true; connected = true;
+  document.body.classList.remove('offline');
+  document.getElementById('offline-gate').classList.remove('visible');
+  document.querySelectorAll('.section').forEach(s=>s.style.display='');
+  document.getElementById('demo-banner').hidden = false;
+  document.getElementById('status-dot').classList.remove('red');
+  document.getElementById('status-text').textContent = 'sample data';
+  document.getElementById('sb-status').textContent = 'demo';
+  document.getElementById('sb-db').textContent = 'none';
+  document.getElementById('sb-db-path').textContent = 'db: none (demo)';
+  const d = makeDemo(); allEvents = d.today; heatEvents = d.week;
+  document.getElementById('sb-event-count').textContent = d.week.length+' sample events';
+  document.getElementById('nb-log').textContent = allEvents.length;
+  document.getElementById('tl-date-label').textContent = longDate(new Date());
+  renderAll();
+}
+function exitDemo(){
+  demo = false; connected = false; heatEvents = null; allEvents = [];
+  document.getElementById('demo-banner').hidden = true;
+  setConnected(false, null);
+  tryConnect();
 }
 
 // ── session reconstruction ──
@@ -369,9 +472,26 @@ function focusLabel(dur){
   return 'glance';
 }
 
+// ── the day in one plain sentence ──
+function renderSummary(sessions){
+  const el = document.getElementById('day-summary');
+  const real = sessions.filter(s=>!s.idle);
+  if(!real.length){ el.textContent = 'Nothing recorded yet today.'; return; }
+  const totals = {}; let longest = real[0], active = 0;
+  for(const s of real){
+    const d = s.end - s.start; active += d;
+    totals[s.app] = (totals[s.app]||0) + d;
+    if(d > longest.end - longest.start) longest = s;
+  }
+  const top = Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
+  el.textContent = 'You were active for '+fmtDur(Math.round(active))+', mostly in '+top[0]+' ('+fmtDur(Math.round(top[1]))+'). '
+    + 'Your longest stretch was '+fmtDur(Math.round(longest.end-longest.start))+' in '+longest.app+', starting at '+fmtTime(longest.start).slice(0,5)+'.';
+}
+
 // ── render timeline ──
 function renderTimeline(){
   const sessions = buildSessions(allEvents);
+  renderSummary(sessions);
   const maxDur = Math.max(...sessions.filter(s=>!s.idle).map(s=>s.end-s.start), 1);
 
   let activeSec=0, idleSec=0, switches=0, deep=0;
@@ -401,7 +521,7 @@ function renderTimeline(){
       if(tlFilter !== 'all' && tlFilter !== 'idle') continue;
       const row = document.createElement('div');
       row.className = 'tl-row idle-gap';
-      row.innerHTML = `<div class="tl-cell">idle for ${fmtDur(Math.round(dur))}</div>`;
+      row.innerHTML = `<div class="tl-cell">idle for ${fmtDur(Math.round(s.dur || dur))}</div>`;
       container.appendChild(row);
       continue;
     }
@@ -447,7 +567,7 @@ function renderApps(){
 function renderHeatmap(){
   const now = Date.now()/1000;
   const grid = {}; // "day_hour" -> count
-  for(const e of allEvents){
+  for(const e of (heatEvents || allEvents)){
     const d = new Date(e.timestamp*1000);
     const key = d.toDateString()+'_'+d.getHours();
     grid[key] = (grid[key]||0)+1;
@@ -497,6 +617,7 @@ function renderLog(){
 function renderAll(){ renderTimeline(); renderApps(); renderHeatmap(); renderLog(); }
 
 // ── nav ──
+const VIEWS = ['timeline','apps','heatmap','log','notes'];
 function showSection(id, el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -515,13 +636,33 @@ function setLogFilter(f, el){
   el.classList.add('active');
   renderLog();
 }
+document.addEventListener('keydown', e => {
+  if(e.target.matches('textarea,input') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = parseInt(e.key, 10) - 1;
+  if(i >= 0 && i < VIEWS.length && connected) showSection(VIEWS[i], document.querySelectorAll('.nav-item')[i]);
+});
+
+// ── notes: one per day, kept in this browser ──
+(function(){
+  const ta = document.getElementById('note-text'), st = document.getElementById('note-status');
+  const key = () => 'blackboxd-note-' + new Date().toLocaleDateString('en-CA');
+  try{ ta.value = localStorage.getItem(key()) || ''; }catch(e){}
+  let timer;
+  ta.addEventListener('input', () => {
+    st.textContent = '...'; clearTimeout(timer);
+    timer = setTimeout(() => {
+      try{ localStorage.setItem(key(), ta.value); st.textContent = 'saved in this browser'; }
+      catch(e){ st.textContent = "couldn't save, storage is blocked"; }
+    }, 400);
+  });
+})();
 
 // ── clock ──
 setInterval(()=>{ document.getElementById('live-time').textContent = new Date().toTimeString().slice(0,8); }, 1000);
 
 // ── poll ──
 tryConnect();
-setInterval(()=>{ if(connected) loadData(); else tryConnect(); }, 5000);
+setInterval(()=>{ if(demo) return; if(connected) loadData(); else tryConnect(); }, 5000);
 </script>
 </body>
 </html>
