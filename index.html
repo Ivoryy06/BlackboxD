@@ -3,138 +3,167 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="blackboxd: a flight recorder for your computer. See where your day went without slowing the machine down.">
 <title>blackboxd</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 :root{
-  --bg:linear-gradient(160deg,#0f2027,#203a43,#2c5364);
-  --card:rgba(255,255,255,0.07);
-  --card-border:rgba(255,255,255,0.11);
-  --input-bg:rgba(255,255,255,0.08);
-  --text:#f0f0f0;
-  --muted:rgba(255,255,255,0.45);
-  --accent:#ffd166;
-  --accent2:#ffb703;
-  --green:#5fff87;
-  --amber:#ffd166;
-  --red:#ff6b6b;
-  --blue:#74b9ff;
-  --shadow:0 8px 32px rgba(0,0,0,0.35);
-  --mono:'JetBrains Mono','Fira Mono',monospace;
+  --bg:#1c1b19;
+  --panel:#252420;
+  --ink:#e9e3d3;
+  --muted:#9a9384;
+  --rule:#3b3933;
+  --accent:#e4572e;
+  --ok:#9dc58a;
+  --warn:#e0b04c;
+  --blue:#8fb3c9;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --serif:Georgia,"Times New Roman",serif;
 }
-body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;animation:fadein .5s ease both}
-@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.frame{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;max-width:1160px;margin:0 auto;padding:0 20px}
+body{font-family:var(--mono);background:var(--bg);color:var(--ink);min-height:100vh;font-size:13px;line-height:1.6}
+a{color:var(--accent)}
+.frame{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;max-width:1100px;margin:0 auto;padding:0 24px}
+
 /* header */
-.titlebar{display:flex;align-items:center;gap:14px;padding:22px 0 16px;border-bottom:1px solid var(--card-border)}
-.tb-title{font-size:20px;font-weight:700;color:var(--accent);letter-spacing:-.3px}
-.tb-sub{font-size:13px;color:var(--muted)}
-.tb-status{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
-.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;flex-shrink:0}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-/* body */
-.body{display:grid;grid-template-columns:210px 1fr;gap:0;min-height:0;padding:20px 0;align-items:start}
+.titlebar{display:flex;align-items:flex-end;gap:16px;padding:34px 0 14px;border-bottom:3px double var(--rule)}
+.tb-title{font-family:var(--serif);font-size:34px;font-style:italic;font-weight:400;line-height:1;color:var(--ink)}
+.tb-title::after{content:"";display:inline-block;width:9px;height:9px;margin-left:8px;background:var(--accent)}
+.tb-sub{margin-top:6px;font-size:12px;color:var(--muted)}
+.tb-status{margin-left:auto;font-size:12px;color:var(--muted)}
+
+/* layout */
+.body{display:grid;grid-template-columns:190px 1fr;gap:36px;padding:26px 0 30px;align-items:start}
+
 /* sidebar */
-.sidebar{display:flex;flex-direction:column;gap:6px;padding-right:16px;position:sticky;top:20px}
-.sidebar-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:10px 12px 4px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:10px;cursor:pointer;color:var(--muted);font-size:13px;font-weight:500;transition:background .15s,color .15s;user-select:none}
-.nav-item:hover{background:var(--card);color:var(--text)}
-.nav-item.active{background:rgba(255,209,102,.12);color:var(--accent)}
-.nav-item .icon{font-size:14px;width:16px;text-align:center}
-.nav-badge{margin-left:auto;font-size:11px;background:var(--input-bg);padding:1px 6px;border-radius:20px;color:var(--muted)}
-.sidebar-divider{border:none;border-top:1px solid var(--card-border);margin:6px 12px}
-.stat-row{display:flex;justify-content:space-between;padding:3px 12px;font-size:12px}
-.stat-row .sk{color:var(--muted)}.stat-row .sv{font-weight:600;color:var(--text)}
-.stat-row .sv.green{color:var(--green)}.stat-row .sv.amber{color:var(--amber)}
+.sidebar{display:flex;flex-direction:column;position:sticky;top:20px}
+.sidebar-label{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin:18px 0 6px}
+.sidebar-label:first-child{margin-top:0}
+.nav-item{position:relative;padding:3px 0 3px 16px;cursor:pointer;color:var(--muted);user-select:none}
+.nav-item:hover{color:var(--ink)}
+.nav-item.active{color:var(--accent)}
+.nav-item.active::before{content:"\203A";position:absolute;left:3px}
+.nav-badge{margin-left:8px;font-size:11px;color:var(--muted)}
+.sidebar-divider{display:none}
+.stat-row{display:flex;justify-content:space-between;gap:10px;padding:2px 0;border-bottom:1px dotted var(--rule)}
+.stat-row .sk{color:var(--muted)}
+.stat-row .sv{color:var(--ink)}
+.stat-row .sv.green{color:var(--ok)}
+.stat-row .sv.amber{color:var(--warn)}
+
 /* main */
-.main{display:flex;flex-direction:column;gap:16px}
-/* card */
-.card{background:var(--card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--card-border);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px;display:flex;flex-direction:column;gap:16px}
-/* panel header */
-.panel-header{display:flex;align-items:baseline;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--card-border)}
-.panel-title{font-size:14px;font-weight:700;color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
-.panel-subtitle{font-size:12px;color:var(--muted)}
-.panel-controls{margin-left:auto;display:flex;gap:6px}
-.btn{font-family:inherit;font-size:12px;padding:4px 12px;background:var(--input-bg);border:1px solid var(--card-border);color:var(--muted);cursor:pointer;border-radius:20px;transition:all .15s}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn.active{background:rgba(255,209,102,.15);border-color:var(--accent);color:var(--accent)}
-/* stats bar */
-.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.stat-cell{background:var(--input-bg);border:1px solid var(--card-border);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
-.stat-cell .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.stat-cell .value{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.02em}
-.stat-cell .value.green{color:var(--green)}.stat-cell .value.amber{color:var(--amber)}
+.main{display:flex;flex-direction:column;min-width:0}
+.card{display:flex;flex-direction:column;gap:20px;border-top:2px solid var(--ink);padding-top:14px}
+.panel-header{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px}
+.panel-title{font-family:var(--serif);font-size:24px;font-weight:400;color:var(--ink)}
+.panel-subtitle{color:var(--muted)}
+.panel-controls{margin-left:auto;display:flex;gap:16px}
+.btn{font:inherit;background:none;border:0;border-bottom:1px solid transparent;color:var(--muted);padding:1px 0;cursor:pointer}
+.btn:hover{color:var(--ink)}
+.btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* stats */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.stat-cell{display:flex;flex-direction:column;padding:2px 0 2px 16px;border-left:1px solid var(--rule)}
+.stat-cell:first-child{border-left:0;padding-left:0}
+.stat-cell .label{font-size:11px;color:var(--muted)}
+.stat-cell .value{font-family:var(--serif);font-size:36px;line-height:1.15;color:var(--ink)}
+.stat-cell .value.green{color:var(--ok)}
+.stat-cell .value.amber{color:var(--warn)}
 .stat-cell .sub{font-size:11px;color:var(--muted)}
+
 /* timeline */
-.timeline{display:flex;flex-direction:column;border-radius:10px;overflow:hidden;border:1px solid var(--card-border)}
-.tl-row{display:grid;grid-template-columns:62px 130px 1fr 68px 110px;align-items:center;min-height:34px;border-bottom:1px solid var(--card-border);transition:background .1s;cursor:default}
-.tl-row:last-child{border-bottom:none}
-.tl-row:hover{background:var(--input-bg)}
-.tl-row.header{background:rgba(255,255,255,.04);min-height:26px}.tl-row.header:hover{background:rgba(255,255,255,.04)}
-.tl-cell{padding:5px 10px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-row.header .tl-cell{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.tl-time{color:var(--muted)}.tl-app{font-weight:600;color:var(--text)}.tl-title{color:var(--muted)}
-.tl-dur{text-align:right;color:var(--text)}
-.tl-bar-wrap{padding:5px 10px;display:flex;align-items:center;gap:7px;overflow:hidden}
-.tl-bar{height:4px;border-radius:2px;min-width:2px;flex-shrink:0;background:rgba(255,209,102,.4)}
-.tl-bar.deep{background:var(--green)}.tl-bar.shallow{background:var(--amber)}.tl-bar.glance{background:rgba(255,255,255,.2)}
-.focus-tag{font-size:9px;font-weight:700;letter-spacing:.07em;padding:2px 6px;border-radius:20px;text-transform:uppercase;background:var(--input-bg);color:var(--muted);border:1px solid var(--card-border)}
-.focus-tag.deep{background:rgba(95,255,135,.12);color:var(--green);border-color:rgba(95,255,135,.3)}
-.focus-tag.shallow{background:rgba(255,209,102,.12);color:var(--amber);border-color:rgba(255,209,102,.3)}
-.tl-row.idle-gap{min-height:22px;background:transparent}.tl-row.idle-gap:hover{background:transparent}
-.tl-row.idle-gap .tl-cell{color:var(--muted);font-size:11px;font-style:italic;grid-column:1/-1}
+.timeline{display:flex;flex-direction:column}
+.tl-row{display:grid;grid-template-columns:64px 120px 1fr 170px 72px;align-items:center;min-height:30px;border-bottom:1px solid var(--rule)}
+.tl-row:hover{background:var(--panel)}
+.tl-row.header{min-height:24px;border-bottom:1px solid var(--ink)}
+.tl-row.header:hover{background:none}
+.tl-cell{padding:3px 8px 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-row.header .tl-cell{font-size:11px;color:var(--muted)}
+.tl-time{color:var(--muted)}
+.tl-app{color:var(--ink)}
+.tl-title{color:var(--muted)}
+.tl-bar-wrap{padding:3px 8px 3px 0;display:flex;align-items:center;gap:8px;overflow:hidden}
+.tl-bar{height:3px;min-width:2px;flex-shrink:0;background:var(--accent)}
+.tl-bar.deep{background:var(--ok)}
+.tl-bar.shallow{background:var(--warn)}
+.tl-bar.glance{background:var(--rule)}
+.tl-dur{color:var(--ink);white-space:nowrap}
+.focus-tag{font-size:11px;color:var(--muted)}
+.focus-tag.deep{color:var(--ok)}
+.focus-tag.shallow{color:var(--warn)}
+.tl-row.idle-gap{min-height:24px}
+.tl-row.idle-gap:hover{background:none}
+.tl-row.idle-gap .tl-cell{grid-column:1/-1;color:var(--muted);font-family:var(--serif);font-style:italic}
+
 /* apps */
 .app-list{display:flex;flex-direction:column}
-.app-row{display:grid;grid-template-columns:150px 1fr 64px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--card-border)}
-.app-row:last-child{border-bottom:none}
-.app-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-bar-track{height:6px;background:var(--input-bg);border-radius:3px;overflow:hidden;border:1px solid var(--card-border)}
-.app-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:3px;transition:width .4s ease}
-.app-time{font-size:12px;color:var(--muted);text-align:right}
+.app-row{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:14px;padding:7px 0;border-bottom:1px solid var(--rule)}
+.app-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-bar-track{height:4px;background:var(--rule)}
+.app-bar-fill{height:100%;background:var(--accent);transition:width .4s ease}
+.app-time{color:var(--muted);text-align:right}
+
 /* heatmap */
-.heatmap{display:flex;flex-direction:column;gap:5px}
-.heatmap-row{display:flex;align-items:center;gap:5px}
-.heatmap-label{font-size:10px;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
-.heatmap-cells{display:flex;gap:3px;flex:1}
-.hm-cell{flex:1;height:14px;border-radius:2px;background:var(--input-bg);border:1px solid var(--card-border);cursor:default;position:relative}
-.hm-cell:hover::after{content:attr(data-tip);position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:#1a2a35;border:1px solid var(--card-border);color:var(--text);font-size:10px;padding:3px 8px;white-space:nowrap;pointer-events:none;z-index:10;border-radius:6px}
-.hm-cell.l1{background:rgba(255,183,3,.2);border-color:rgba(255,183,3,.3)}
-.hm-cell.l2{background:rgba(255,183,3,.5);border-color:rgba(255,183,3,.6)}
-.hm-cell.l3{background:var(--accent);border-color:var(--accent)}
-.heatmap-hours{display:flex;gap:3px;padding-left:41px;margin-bottom:-2px}
-.heatmap-hours span{flex:1;font-size:9px;color:var(--muted);text-align:center}
+.heatmap{display:flex;flex-direction:column;gap:4px}
+.heatmap-row{display:flex;align-items:center;gap:6px}
+.heatmap-label{font-size:11px;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
+.heatmap-cells{display:flex;gap:2px;flex:1}
+.hm-cell{flex:1;height:16px;background:var(--panel);position:relative}
+.hm-cell:hover::after{content:attr(data-tip);position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:11px;padding:2px 8px;white-space:nowrap;pointer-events:none;z-index:10}
+.hm-cell.l1{background:#5b3022}
+.hm-cell.l2{background:#a2412a}
+.hm-cell.l3{background:var(--accent)}
+.heatmap-hours{display:flex;gap:2px;padding-left:42px}
+.heatmap-hours span{flex:1;font-size:10px;color:var(--muted)}
+
 /* log */
-.log-view{font-size:12px;line-height:1.8;color:var(--muted);max-height:340px;overflow-y:auto}
-.log-line{display:flex;gap:12px}
-.log-ts{color:var(--muted);flex-shrink:0;width:80px}
-.log-kind{flex-shrink:0;width:140px}
-.log-kind.focus{color:var(--blue)}.log-kind.idle{color:var(--amber)}.log-kind.switch{color:var(--green)}.log-kind.daemon{color:var(--muted)}
-.log-body{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* statusbar */
-.statusbar{border-top:1px solid var(--card-border);padding:8px 0;display:flex;align-items:center;gap:16px;font-size:11px;color:var(--muted)}
-.statusbar .seg{display:flex;align-items:center;gap:6px}
-.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
-.statusbar .dot.red{background:var(--red)}
-.statusbar .sep{color:var(--card-border)}.statusbar .ml{margin-left:auto}
-/* section */
-.section{display:none;flex-direction:column;gap:14px;animation:fadein .15s ease}
+.log-view{line-height:1.8;color:var(--muted);max-height:360px;overflow-y:auto}
+.log-line{display:flex;gap:14px}
+.log-ts{flex-shrink:0;width:70px}
+.log-kind{flex-shrink:0;width:130px}
+.log-kind.focus{color:var(--blue)}
+.log-kind.idle{color:var(--warn)}
+.log-kind.switch{color:var(--ok)}
+.log-body{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* status bar */
+.statusbar{border-top:1px solid var(--rule);padding:10px 0 18px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font-size:11px;color:var(--muted)}
+.statusbar .dot{display:inline-block;width:7px;height:7px;margin-right:6px;background:var(--ok)}
+.statusbar .dot.red{background:var(--accent)}
+.statusbar .sep{display:none}
+.statusbar .ml{margin-left:auto}
+
+/* sections */
+.section{display:none;flex-direction:column;gap:14px}
 .section.active{display:flex}
+
 /* offline gate */
-#offline-gate{display:none;align-items:center;justify-content:center;flex:1;padding:60px 20px}
+#offline-gate{display:none;flex:1;padding:10px 0 40px}
 #offline-gate.visible{display:flex}
-.gate-card{background:var(--card);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--card-border);border-radius:20px;box-shadow:var(--shadow);padding:40px 44px;max-width:520px;width:100%;display:flex;flex-direction:column;gap:18px;animation:fadein .4s ease both}
-.gate-icon{font-size:36px;opacity:.5;text-align:center}
-.gate-title{font-size:22px;font-weight:700;color:var(--accent);text-align:center}
-.gate-sub{font-size:13px;color:var(--muted);text-align:center;line-height:1.8}
-.gate-steps{display:flex;flex-direction:column;gap:8px}
-.gate-step-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
-.gate-cmd{background:rgba(0,0,0,.3);border:1px solid var(--card-border);border-radius:10px;padding:10px 16px;font-family:var(--mono);font-size:12px;color:var(--green);letter-spacing:.03em;white-space:pre}
-.gate-retry{font-size:11px;color:var(--muted);text-align:center;opacity:.7}
-/* scrollbar */
-::-webkit-scrollbar{width:4px;height:4px}
+.gate-card{max-width:560px;border-left:3px solid var(--accent);padding:2px 0 2px 24px;display:flex;flex-direction:column;gap:14px}
+.gate-title{font-family:var(--serif);font-size:30px;line-height:1.15;font-weight:400}
+.gate-sub{color:var(--muted);line-height:1.7}
+.gate-steps{display:flex;flex-direction:column;gap:6px}
+.gate-step-label{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin-top:6px}
+.gate-cmd{background:var(--panel);padding:10px 14px;color:var(--ok);white-space:pre;overflow-x:auto}
+.gate-retry{font-size:11px;color:var(--muted)}
+
+::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+::-webkit-scrollbar-thumb{background:var(--rule)}
+
+@media (max-width:760px){
+  .frame{padding:0 16px}
+  .body{grid-template-columns:1fr;gap:18px}
+  .sidebar{position:static}
+  .stats-bar{grid-template-columns:1fr 1fr;row-gap:16px}
+  .stat-cell:nth-child(3){border-left:0;padding-left:0}
+  .tl-row{grid-template-columns:56px 1fr 130px 60px}
+  .tl-title{display:none}
+  .app-row{grid-template-columns:100px 1fr 60px}
+  .log-kind{width:100px}
+}
 </style>
 </head>
 <body>
@@ -144,54 +173,50 @@ body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(
       <div class="tb-title">blackboxd</div>
       <div class="tb-sub">activity recorder v0.1.0</div>
     </div>
-    <div class="tb-status"><span class="pulse"></span><span id="live-time">--:--:--</span></div>
+    <div class="tb-status"><span id="live-time">--:--:--</span></div>
   </div>
 
   <div class="body">
     <div class="sidebar">
       <div class="sidebar-label">views</div>
-      <div class="nav-item active" onclick="showSection('timeline',this)"><span class="icon">▶</span> timeline</div>
-      <div class="nav-item" onclick="showSection('apps',this)"><span class="icon">□</span> apps<span class="nav-badge" id="nb-apps">—</span></div>
-      <div class="nav-item" onclick="showSection('heatmap',this)"><span class="icon">▦</span> heatmap</div>
-      <div class="nav-item" onclick="showSection('log',this)"><span class="icon">≡</span> raw log<span class="nav-badge" id="nb-log">—</span></div>
-      <hr class="sidebar-divider">
+      <div class="nav-item active" onclick="showSection('timeline',this)">timeline</div>
+      <div class="nav-item" onclick="showSection('apps',this)">apps<span class="nav-badge" id="nb-apps">—</span></div>
+      <div class="nav-item" onclick="showSection('heatmap',this)">heatmap</div>
+      <div class="nav-item" onclick="showSection('log',this)">raw log<span class="nav-badge" id="nb-log">—</span></div>
       <div class="sidebar-label">today</div>
       <div class="stat-row"><span class="sk">active</span><span class="sv green" id="sb-active">—</span></div>
       <div class="stat-row"><span class="sk">idle</span><span class="sv" id="sb-idle">—</span></div>
       <div class="stat-row"><span class="sk">switches</span><span class="sv" id="sb-switches">—</span></div>
       <div class="stat-row"><span class="sk">deep</span><span class="sv green" id="sb-deep">—</span></div>
       <div class="stat-row"><span class="sk">events</span><span class="sv" id="sb-events">—</span></div>
-      <hr class="sidebar-divider">
       <div class="sidebar-label">daemon</div>
       <div class="stat-row"><span class="sk">status</span><span class="sv" id="sb-status">connecting…</span></div>
       <div class="stat-row"><span class="sk">db</span><span class="sv" id="sb-db">—</span></div>
     </div>
 
     <div class="main" id="main-panel">
-      
+
       <div id="offline-gate">
         <div class="gate-card">
-          <div class="gate-icon">⬡</div>
           <div class="gate-title">Start BlackboxD first</div>
-          <div class="gate-sub">The backend isn't running. Start it locally and this page will connect automatically.</div>
+          <div class="gate-sub">The backend isn't running. Start it on your own machine and this page will find it by itself.</div>
           <div class="gate-steps">
-            <div class="gate-step-label">1 — install</div>
+            <div class="gate-step-label">1. install</div>
             <div class="gate-cmd">git clone https://github.com/Ivoryy06/BlackboxD.git
 cd BlackboxD && chmod +x install.sh && ./install.sh</div>
-            <div class="gate-step-label">2 — start the daemon</div>
+            <div class="gate-step-label">2. start the daemon</div>
             <div class="gate-cmd">blackboxd start</div>
-            <div class="gate-step-label">3 — start the API</div>
+            <div class="gate-step-label">3. start the API</div>
             <div class="gate-cmd">cd go-api && ./blackboxd-api</div>
           </div>
-          <div class="gate-retry">Checking for backend every 5 seconds…</div>
+          <div class="gate-retry">Looking for the backend every 5 seconds.</div>
         </div>
       </div>
 
-      
       <div class="section active" id="s-timeline">
         <div class="card">
           <div class="panel-header">
-            <span class="panel-title">timeline</span>
+            <span class="panel-title">Timeline</span>
             <span class="panel-subtitle" id="tl-date-label">—</span>
             <div class="panel-controls">
               <button class="btn active" onclick="setFilter('all',this)">all</button>
@@ -201,41 +226,38 @@ cd BlackboxD && chmod +x install.sh && ./install.sh</div>
           </div>
           <div class="stats-bar">
             <div class="stat-cell"><span class="label">active</span><span class="value green" id="sc-active">—</span><span class="sub">hours:min</span></div>
-            <div class="stat-cell"><span class="label">deep sessions</span><span class="value" id="sc-deep">—</span><span class="sub">≥ 25 min unbroken</span></div>
+            <div class="stat-cell"><span class="label">deep sessions</span><span class="value" id="sc-deep">—</span><span class="sub">25 min or more, unbroken</span></div>
             <div class="stat-cell"><span class="label">switches</span><span class="value amber" id="sc-switches">—</span><span class="sub">context changes</span></div>
             <div class="stat-cell"><span class="label">idle</span><span class="value" id="sc-idle">—</span><span class="sub">hours:min</span></div>
           </div>
           <div class="timeline" id="timeline-rows">
             <div class="tl-row header">
-              <div class="tl-cell">time</div><div class="tl-cell">app</div><div class="tl-cell">title</div>
-              <div class="tl-cell" style="text-align:right">duration</div><div class="tl-cell" style="text-align:right">focus</div>
+              <div class="tl-cell">time</div><div class="tl-cell">app</div><div class="tl-cell tl-title">title</div>
+              <div class="tl-cell">duration</div><div class="tl-cell">focus</div>
             </div>
           </div>
         </div>
       </div>
 
-      
       <div class="section" id="s-apps">
         <div class="card">
-          <div class="panel-header"><span class="panel-title">applications</span><span class="panel-subtitle">time distribution today</span></div>
+          <div class="panel-header"><span class="panel-title">Applications</span><span class="panel-subtitle">where today's time went</span></div>
           <div class="app-list" id="app-list-rows"></div>
         </div>
       </div>
 
-      
       <div class="section" id="s-heatmap">
         <div class="card">
-          <div class="panel-header"><span class="panel-title">activity heatmap</span><span class="panel-subtitle">last 7 days × 24 hours</span></div>
+          <div class="panel-header"><span class="panel-title">Heatmap</span><span class="panel-subtitle">last 7 days, by hour</span></div>
           <div class="heatmap-hours" id="hm-hour-labels"></div>
           <div class="heatmap" id="heatmap-grid"></div>
         </div>
       </div>
 
-      
       <div class="section" id="s-log">
         <div class="card">
           <div class="panel-header">
-            <span class="panel-title">raw event log</span>
+            <span class="panel-title">Raw log</span>
             <span class="panel-subtitle" id="log-subtitle">—</span>
             <div class="panel-controls">
               <button class="btn active" onclick="setLogFilter('all',this)">all</button>
@@ -251,16 +273,15 @@ cd BlackboxD && chmod +x install.sh && ./install.sh</div>
 
   <div class="statusbar">
     <div class="seg"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></div>
-    <span class="sep">|</span>
     <div class="seg" id="sb-db-path">db: —</div>
-    <div class="seg ml" id="sb-event-count">— events</div>
+    <div class="seg ml"><span id="sb-event-count">— events</span> · <a href="https://github.com/Ivoryy06/BlackboxD">source</a></div>
   </div>
 </div>
 <script>
 const API = 'http://localhost:8080';
 let allEvents = [], connected = false, tlFilter = 'all', logFilter = 'all';
 
-// ── utils ──────────────────────────────────────────────────────────────────
+// ── utils ──
 function fmtTime(ts){ const d=new Date(ts*1000); return d.toTimeString().slice(0,8); }
 function fmtDur(s){
   if(s<60) return s+'s';
@@ -270,7 +291,7 @@ function fmtDur(s){
 function fmtHM(s){ return Math.floor(s/3600)+':'+String(Math.floor((s%3600)/60)).padStart(2,'0'); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// ── connection detection ───────────────────────────────────────────────────
+// ── connection detection ──
 async function tryConnect(){
   try {
     const r = await fetch(API+'/api/health', {signal: AbortSignal.timeout(2000)});
@@ -304,7 +325,7 @@ function setConnected(ok, dbPath){
   }
 }
 
-// ── data loading ───────────────────────────────────────────────────────────
+// ── data loading ──
 async function loadData(){
   const today = new Date(); today.setHours(0,0,0,0);
   const since = today.getTime()/1000;
@@ -322,7 +343,7 @@ async function loadData(){
   renderAll();
 }
 
-// ── session reconstruction ─────────────────────────────────────────────────
+// ── session reconstruction ──
 function buildSessions(events){
   const sessions = [];
   let cur = null;
@@ -334,7 +355,7 @@ function buildSessions(events){
       if(cur) { cur.end = e.timestamp; sessions.push(cur); cur = null; }
       sessions.push({idle: true, start: e.timestamp, end: e.timestamp, dur: e.idle_seconds||0});
     } else if(e.kind === 'idle_end' && cur == null){
-      // resume after idle — next focus event will create new session
+      // resume after idle: the next focus event will create a new session
     }
   }
   if(cur){ cur.end = Date.now()/1000; sessions.push(cur); }
@@ -348,7 +369,7 @@ function focusLabel(dur){
   return 'glance';
 }
 
-// ── render timeline ────────────────────────────────────────────────────────
+// ── render timeline ──
 function renderTimeline(){
   const sessions = buildSessions(allEvents);
   const maxDur = Math.max(...sessions.filter(s=>!s.idle).map(s=>s.end-s.start), 1);
@@ -380,7 +401,7 @@ function renderTimeline(){
       if(tlFilter !== 'all' && tlFilter !== 'idle') continue;
       const row = document.createElement('div');
       row.className = 'tl-row idle-gap';
-      row.innerHTML = `<div class="tl-cell">— idle ${fmtDur(Math.round(dur))} —</div>`;
+      row.innerHTML = `<div class="tl-cell">idle for ${fmtDur(Math.round(dur))}</div>`;
       container.appendChild(row);
       continue;
     }
@@ -394,13 +415,13 @@ function renderTimeline(){
       `<div class="tl-cell tl-time">${fmtTime(s.start)}</div>`+
       `<div class="tl-cell tl-app">${esc(s.app)}</div>`+
       `<div class="tl-cell tl-title">${esc(s.title)}</div>`+
-      `<div class="tl-bar-wrap"><div class="tl-bar ${focus}" style="width:${barPct}%"></div><span class="tl-dur">${fmtDur(Math.round(dur))}</span></div>`+
+      `<div class="tl-bar-wrap"><div class="tl-bar ${focus}" style="width:${Math.round(barPct*0.7)}px"></div><span class="tl-dur">${fmtDur(Math.round(dur))}</span></div>`+
       `<div class="tl-cell tl-focus"><span class="focus-tag ${focus}">${focus}</span></div>`;
     container.appendChild(row);
   }
 }
 
-// ── render apps ────────────────────────────────────────────────────────────
+// ── render apps ──
 function renderApps(){
   const totals = {};
   const sessions = buildSessions(allEvents);
@@ -422,7 +443,7 @@ function renderApps(){
   ).join('');
 }
 
-// ── render heatmap ─────────────────────────────────────────────────────────
+// ── render heatmap ──
 function renderHeatmap(){
   const now = Date.now()/1000;
   const grid = {}; // "day_hour" -> count
@@ -457,7 +478,7 @@ function renderHeatmap(){
   }
 }
 
-// ── render log ─────────────────────────────────────────────────────────────
+// ── render log ──
 function renderLog(){
   const filtered = logFilter==='all' ? allEvents :
     allEvents.filter(e=> logFilter==='focus'?e.kind==='window_focus':e.kind.startsWith('idle'));
@@ -475,7 +496,7 @@ function renderLog(){
 
 function renderAll(){ renderTimeline(); renderApps(); renderHeatmap(); renderLog(); }
 
-// ── nav ────────────────────────────────────────────────────────────────────
+// ── nav ──
 function showSection(id, el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -484,7 +505,7 @@ function showSection(id, el){
 }
 function setFilter(f, el){
   tlFilter = f;
-  document.querySelectorAll('.panel-controls .btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#s-timeline .panel-controls .btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   renderTimeline();
 }
@@ -495,10 +516,10 @@ function setLogFilter(f, el){
   renderLog();
 }
 
-// ── clock ──────────────────────────────────────────────────────────────────
+// ── clock ──
 setInterval(()=>{ document.getElementById('live-time').textContent = new Date().toTimeString().slice(0,8); }, 1000);
 
-// ── poll ───────────────────────────────────────────────────────────────────
+// ── poll ──
 tryConnect();
 setInterval(()=>{ if(connected) loadData(); else tryConnect(); }, 5000);
 </script>
