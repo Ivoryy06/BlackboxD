@@ -414,10 +414,13 @@ function makeDemo(){
     else { today.push({kind:'window_focus',app_name:p[1],window_title:p[2],timestamp:t}); t += p[0]*60; }
   }
   const week = [...today];
+  // earlier days are placed by local midnight so the busy hours land on sensible local hours
+  const mid = new Date(); mid.setHours(0,0,0,0);
+  const midTs = Math.floor(mid.getTime()/1000);
   for(let d=1; d<=6; d++){
     for(let h=8; h<=23; h++){
       const n = Math.floor(rnd()*rnd()*(h>=9&&h<=18?40:18));
-      for(let i=0;i<n;i++) week.push({kind:'window_focus',app_name:'x',timestamp:now - d*86400 - (now%86400) + h*3600 + i});
+      for(let i=0;i<n;i++) week.push({kind:'window_focus',app_name:'x',timestamp:midTs - d*86400 + h*3600 + i});
     }
   }
   return {today, week};
