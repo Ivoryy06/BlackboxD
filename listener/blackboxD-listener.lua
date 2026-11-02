@@ -7,7 +7,7 @@ local socket_unix = require("socket.unix")
 -- Configuration
 local CONFIG = {
     api_host = os.getenv("BLACKBOXD_HOST") or "127.0.0.1",
-    api_port = tonumber(os.getenv("BLACKBOXD_PORT")) or 9099,
+    api_port = tonumber(os.getenv("BLACKBOXD_PORT")) or 8080,
     reconnect_delay = 2,
     debug = os.getenv("BLACKBOXD_DEBUG") == "1",
 }

@@ -29,7 +29,7 @@ def _serve_dashboard(engine, port: int) -> None:
     from http.server import BaseHTTPRequestHandler, HTTPServer
 
     here = Path(__file__).parent.parent
-    template = here / "dashboard.html"
+    template = here / "index.html"
 
     def _serial(e):
         d = dataclasses.asdict(e)
@@ -51,7 +51,7 @@ def _serve_dashboard(engine, port: int) -> None:
             parsed = urllib.parse.urlparse(self.path)
             qs = urllib.parse.parse_qs(parsed.query)
 
-            if parsed.path == "/data":
+            if parsed.path in ("/data", "/data/events"):
                 since = float(qs["since"][0]) if "since" in qs else None
                 until = float(qs["until"][0]) if "until" in qs else None
                 events = engine.query(since=since, until=until)
@@ -65,7 +65,10 @@ def _serve_dashboard(engine, port: int) -> None:
                     "latest":   dr[1] if dr else None,
                 })
 
-            elif parsed.path in ("/", "/dashboard.html"):
+            elif parsed.path == "/data/health":
+                self._json({"status": "ok", "db": str(engine_path)})
+
+            elif parsed.path in ("/", "/index.html", "/dashboard.html"):
                 body = template.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -78,6 +81,7 @@ def _serve_dashboard(engine, port: int) -> None:
                 self.end_headers()
 
     import webbrowser, threading
+    engine_path = engine._path
     server = HTTPServer(("127.0.0.1", port), Handler)
     url = f"http://127.0.0.1:{port}"
     print(f"blackboxd dashboard → {url}  (Ctrl-C to stop)")
@@ -86,13 +90,15 @@ def _serve_dashboard(engine, port: int) -> None:
 
 
 
-    """Bake all events into dashboard.html and write a self-contained file."""
+def _export_dashboard(engine, output: Path | None) -> None:
+    """Bake all events into index.html and write a self-contained file."""
     import dataclasses
+    import webbrowser
 
-    here = Path(__file__).parent.parent  
-    template = here / "dashboard.html"
+    here = Path(__file__).parent.parent
+    template = here / "index.html"
     if not template.exists():
-        print(f"dashboard.html not found at {template}", file=sys.stderr)
+        print(f"index.html not found at {template}", file=sys.stderr)
         sys.exit(1)
 
     events = engine.query()
@@ -109,26 +115,30 @@ def _serve_dashboard(engine, port: int) -> None:
         return d
 
     payload = json.dumps({"events": [_serial(e) for e in events], "stats": stats})
-    inline = f'const INLINE_DATA = {payload};'
+    inline = f"const INLINE_DATA = {payload};"
 
-    html = template.read_text()
+    html = template.read_text(encoding="utf-8")
     html = html.replace(
         "/* BLACKBOXD_INLINE_DATA — replaced by `blackboxd dashboard --export` */\nconst INLINE_DATA = null;",
         inline,
     )
 
     dest = output or Path("blackboxd-dashboard.html")
-    dest.write_text(html)
+    dest.write_text(html, encoding="utf-8")
     print(f"Dashboard written to {dest}")
 
-    
     if output is None:
-        import webbrowser
         webbrowser.open(dest.resolve().as_uri())
 
 
 def main() -> None:
     import argparse
+
+    # Windows consoles default to cp1252 and choke on the box-drawing glyphs.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
 
     from blackboxd.config import Config
     from blackboxd.storage.engine import StorageEngine
@@ -216,3 +226,7 @@ def main() -> None:
                 print(renderer.render_day(days[0]))
             else:
                 print("No activity recorded for that period.")
+
+
+if __name__ == "__main__":
+    main()

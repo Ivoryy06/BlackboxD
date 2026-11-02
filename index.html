@@ -3,669 +3,1029 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="blackboxd: a flight recorder for your computer. See where your day went without slowing the machine down.">
+<meta name="description" content="blackboxd: a flight recorder for your day. See where the time went without uploading a single event.">
+<meta property="og:title" content="blackboxd">
+<meta property="og:description" content="A flight recorder for your day. Private, local, and a little bit cute.">
 <title>blackboxd</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Caveat:wght@500;600&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 :root{
-  --bg:#1c1b19;
-  --panel:#252420;
-  --ink:#e9e3d3;
-  --muted:#9a9384;
-  --rule:#3b3933;
-  --accent:#e4572e;
-  --ok:#9dc58a;
-  --warn:#e0b04c;
-  --blue:#8fb3c9;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  --serif:Georgia,"Times New Roman",serif;
-  --hand:'Caveat',"Segoe Print","Bradley Hand",cursive;
+  color-scheme:dark;
+  --bg:#1b1023;
+  --panel:#251631;
+  --panel-2:#33203f;
+  --line:#4a2e5c;
+  --text:#fff0fb;
+  --muted:#cbb0da;
+  --primary:#ff8fc9;
+  --accent:#d8b4fe;
+  --ok:#a7f3c9;
+  --warn:#ffd08a;
+  --blue:#9ad9ff;
+  --glow:rgba(255,143,201,.22);
+  --surface:linear-gradient(165deg,#251631,#33203f);
+  --max:1140px;
+  --radius:24px;
 }
-body{font-family:var(--mono);background:var(--bg);color:var(--ink);min-height:100vh;font-size:13px;line-height:1.6}
-/* a little paper grain so it doesn't feel like a flat screen */
-body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.07;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
-a{color:var(--accent)}
-.frame{position:relative;z-index:1;display:grid;grid-template-rows:auto 1fr auto;min-height:100vh;max-width:1100px;margin:0 auto;padding:0 24px}
+body{
+  min-height:100vh;
+  font-family:"Quicksand",system-ui,sans-serif;
+  font-size:15px;line-height:1.65;
+  color:var(--text);
+  background:
+    radial-gradient(720px 520px at 12% -8%,rgba(216,180,254,.16),transparent 62%),
+    radial-gradient(640px 460px at 92% 4%,rgba(255,143,201,.14),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(255,240,251,.16) 1px,transparent 1px);
+  background-size:34px 34px;opacity:.28;
+  mask-image:linear-gradient(to bottom,#000,transparent 78%);
+}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+button{font:inherit;color:inherit}
+::selection{background:rgba(255,143,201,.32)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+:focus-visible{outline:2px dashed var(--primary);outline-offset:3px}
 
-/* header */
-.titlebar{display:flex;align-items:flex-end;flex-wrap:wrap;gap:8px 22px;padding:34px 0 14px;border-bottom:3px double var(--rule)}
-.tb-title{font-family:var(--serif);font-size:34px;font-style:italic;font-weight:400;line-height:1;color:var(--ink)}
-.tb-title::after{content:"";display:inline-block;width:9px;height:9px;margin-left:8px;background:var(--accent)}
-body.offline .tb-title::after{background:var(--muted)}
-.tb-sub{margin-top:6px;font-size:12px;color:var(--muted)}
-.margin-note{display:flex;align-items:center;gap:6px;font-family:var(--hand);font-size:20px;line-height:1.1;color:var(--accent);transform:rotate(-2deg);padding-bottom:2px}
-.margin-note svg{width:34px;height:20px;flex-shrink:0}
-.tb-status{margin-left:auto;font-size:12px;color:var(--muted)}
+.stage{
+  position:relative;z-index:1;
+  width:min(var(--max),100% - 32px);
+  margin:0 auto;padding:clamp(20px,4vw,44px) 0 28px;
+  display:grid;grid-template-columns:280px minmax(0,1fr);
+  gap:clamp(20px,3vw,40px);align-items:start;
+}
+.stage > *{min-width:0}
 
-/* demo banner */
-.demo-banner{margin-bottom:16px;padding:8px 12px;border:1px dashed var(--accent);color:var(--ink)}
-.demo-banner button{margin-left:10px}
+/* ---------- side card ---------- */
+.side{position:sticky;top:clamp(16px,4vw,32px);display:grid;gap:16px}
+.profile{
+  position:relative;overflow:hidden;
+  background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:24px 22px 22px;
+  box-shadow:0 24px 60px -32px var(--glow),0 0 0 1px rgba(255,255,255,.02) inset;
+}
+.profile::after{
+  content:"";position:absolute;width:140px;height:140px;right:-58px;top:-58px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,143,201,.34),transparent 68%);
+  pointer-events:none;
+}
+.avatar{
+  display:grid;place-items:center;width:66px;height:66px;border-radius:22px;
+  background:linear-gradient(150deg,rgba(255,143,201,.28),rgba(216,180,254,.2));
+  border:1px solid rgba(255,143,201,.45);
+  box-shadow:0 0 0 6px rgba(255,143,201,.06);
+  color:var(--primary);margin-bottom:14px;
+}
+.avatar svg{width:30px;height:30px}
+.name{font-family:"Baloo 2",cursive;font-size:31px;line-height:1.05;letter-spacing:-.02em}
+.role{font-family:"Caveat",cursive;font-size:21px;line-height:1.25;color:var(--accent);margin-top:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{
+  font-size:11px;letter-spacing:.04em;text-transform:lowercase;
+  padding:3px 9px;border-radius:99px;
+  color:var(--muted);border:1px solid var(--line);background:rgba(255,240,251,.03);
+}
+.live{
+  display:flex;align-items:center;gap:8px;margin-top:14px;
+  font-size:12px;color:var(--muted);
+}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(167,243,201,.13);flex-shrink:0}
+.dot.warn{background:var(--warn);box-shadow:0 0 0 4px rgba(255,208,138,.13)}
+.dot.off{background:#ff8c9c;box-shadow:0 0 0 4px rgba(255,140,156,.13)}
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
-/* layout */
-.body{display:grid;grid-template-columns:190px 1fr;gap:36px;padding:26px 0 30px;align-items:start}
+.nav{margin-top:20px;padding-top:16px;border-top:1px dashed var(--line);display:grid;gap:3px}
+.nav-label{font-family:"Caveat",cursive;font-size:19px;color:var(--muted);margin:0 0 4px 2px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  width:100%;text-align:left;background:none;border:0;cursor:pointer;
+  padding:7px 10px;border-radius:12px;color:var(--muted);
+  transition:background .18s,color .18s,transform .18s;
+}
+.nav-item:hover{background:rgba(255,240,251,.05);color:var(--text);transform:translateX(2px)}
+.nav-item.active{background:linear-gradient(120deg,rgba(255,143,201,.18),rgba(216,180,254,.1));color:var(--text);box-shadow:inset 0 0 0 1px rgba(255,143,201,.22)}
+.nav-item .key{
+  font-size:10px;width:18px;height:18px;display:grid;place-items:center;border-radius:6px;
+  border:1px solid var(--line);color:var(--muted);flex-shrink:0;
+}
+.nav-item.active .key{border-color:rgba(255,143,201,.5);color:var(--primary)}
+.nav-item .badge{margin-left:auto;font-size:11px;color:var(--muted)}
 
-/* sidebar */
-.sidebar{display:flex;flex-direction:column;position:sticky;top:20px}
-.sidebar-label{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin:18px 0 6px}
-.sidebar-label:first-child{margin-top:0}
-.nav-item{position:relative;padding:3px 0 3px 16px;cursor:pointer;color:var(--muted);user-select:none}
-.nav-item:hover{color:var(--ink)}
-.nav-item.active{color:var(--accent)}
-.nav-item.active::before{content:"\203A";position:absolute;left:3px}
-.nav-badge{margin-left:8px;font-size:11px;color:var(--muted)}
-.stat-row{display:flex;justify-content:space-between;gap:10px;padding:2px 0;border-bottom:1px dotted var(--rule)}
-.stat-row .sk{color:var(--muted)}
-.stat-row .sv{color:var(--ink)}
-.stat-row .sv.green{color:var(--ok)}
-.stat-row .sv.amber{color:var(--warn)}
-.keys{margin-top:22px;font-family:var(--hand);font-size:18px;line-height:1.2;color:var(--muted);transform:rotate(-1.5deg)}
+.mini{margin-top:18px;padding-top:16px;border-top:1px dashed var(--line);display:grid;gap:6px}
+.mini-row{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.mini-row span:first-child{color:var(--muted)}
+.mini-row span:last-child{font-weight:600}
+.mini-row .good{color:var(--ok)}
+.mini-row .warm{color:var(--warn)}
 
-/* main */
-.main{display:flex;flex-direction:column;min-width:0}
-.card{display:flex;flex-direction:column;gap:18px;border-top:2px solid var(--ink);padding-top:14px}
-.panel-header{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px}
-.panel-title{font-family:var(--serif);font-size:24px;font-weight:400;color:var(--ink)}
-.panel-subtitle{color:var(--muted)}
-.panel-controls{margin-left:auto;display:flex;gap:16px}
-.btn{font:inherit;background:none;border:0;border-bottom:1px solid transparent;color:var(--muted);padding:1px 0;cursor:pointer}
-.btn:hover{color:var(--ink)}
-.btn.active{color:var(--accent);border-bottom-color:var(--accent)}
-.linkbtn{font:inherit;background:none;border:0;border-bottom:1px solid var(--muted);color:var(--ink);padding:0;cursor:pointer}
-.linkbtn:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.side-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.ghost{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 13px;border-radius:99px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(255,240,251,.03);
+  color:var(--muted);font-size:12.5px;transition:all .18s;
+}
+.ghost:hover{color:var(--text);border-color:var(--primary);transform:translateY(-1px)}
+.tip{
+  font-family:"Caveat",cursive;font-size:19px;line-height:1.25;color:var(--muted);
+  padding:0 6px;transform:rotate(-1.2deg);
+}
 
-/* plain-english summary */
-.day-summary{font-family:var(--serif);font-size:19px;line-height:1.5;max-width:42em}
-.legend{font-size:11px;color:var(--muted);margin-top:-6px}
+/* ---------- main ---------- */
+.main{display:grid;gap:clamp(26px,4vw,46px);padding-bottom:14px}
+.hero{position:relative;padding:6px 0 4px}
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+}
+.eyebrow::before{content:"";width:26px;height:1px;background:linear-gradient(90deg,transparent,var(--accent))}
+h1{
+  font-family:"Baloo 2",cursive;font-weight:700;
+  font-size:clamp(34px,6vw,58px);line-height:1.02;letter-spacing:-.035em;
+  margin:10px 0 0;max-width:15ch;
+}
+h1 .pink{color:var(--primary)}
+.hero-date{font-family:"Caveat",cursive;font-size:23px;color:var(--muted);margin-top:8px}
+.hero-summary{
+  font-size:16px;color:var(--muted);max-width:56ch;margin-top:12px;
+}
+.hero-summary strong{color:var(--text);font-weight:600}
+.hero-line{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;
+  margin-top:16px;font-size:12px;color:var(--muted);
+}
+.hero-line .clock{color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:.05em}
+.bow{color:var(--primary);opacity:.85}
 
-/* stats */
-.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
-.stat-cell{display:flex;flex-direction:column;padding:2px 0 2px 16px;border-left:1px solid var(--rule)}
-.stat-cell:first-child{border-left:0;padding-left:0}
-.stat-cell .label{font-size:11px;color:var(--muted)}
-.stat-cell .value{font-family:var(--serif);font-size:36px;line-height:1.15;color:var(--ink)}
-.stat-cell .value.green{color:var(--ok)}
-.stat-cell .value.amber{color:var(--warn)}
-.stat-cell .sub{font-size:11px;color:var(--muted)}
+.day-stats{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px;
+}
+.stat{
+  position:relative;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  padding:13px 15px 12px;
+}
+.stat::after{
+  content:"";position:absolute;inset:auto -20% -60% auto;width:90px;height:90px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,143,201,.16),transparent 70%);
+}
+.stat .k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:"Baloo 2",cursive;font-size:clamp(24px,3vw,31px);line-height:1.2;color:var(--text);font-weight:600}
+.stat .v.good{color:var(--ok)}
+.stat .v.warm{color:var(--warn)}
+.stat .s{font-size:11px;color:var(--muted)}
+
+/* ---------- panels ---------- */
+.section{display:none}
+.section.active{display:block;animation:fade .32s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:clamp(18px,3vw,26px);
+  box-shadow:0 20px 50px -38px var(--glow);
+}
+.panel-head{
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;
+  padding-bottom:14px;border-bottom:1px dashed var(--line);margin-bottom:16px;
+}
+.panel-title{font-family:"Baloo 2",cursive;font-size:26px;line-height:1.1;letter-spacing:-.02em}
+.panel-sub{font-size:12.5px;color:var(--muted)}
+.filters{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.filter{
+  background:rgba(255,240,251,.03);border:1px solid var(--line);border-radius:99px;
+  padding:4px 12px;font-size:12px;color:var(--muted);cursor:pointer;transition:all .16s;
+}
+.filter:hover{color:var(--text);border-color:var(--accent)}
+.filter.active{background:rgba(255,143,201,.16);border-color:rgba(255,143,201,.5);color:var(--text)}
 
 /* timeline */
-.timeline{display:flex;flex-direction:column}
-.tl-row{display:grid;grid-template-columns:64px 120px 1fr 170px 72px;align-items:center;min-height:30px;border-bottom:1px solid var(--rule)}
-.tl-row:hover{background:var(--panel)}
-.tl-row.header{min-height:24px;border-bottom:1px solid var(--ink)}
-.tl-row.header:hover{background:none}
-.tl-cell{padding:3px 8px 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl-row.header .tl-cell{font-size:11px;color:var(--muted)}
-.tl-time{color:var(--muted)}
-.tl-app{color:var(--ink)}
+.timeline{display:grid}
+.tl-row{
+  display:grid;grid-template-columns:70px 130px minmax(0,1fr) 160px 96px;
+  align-items:center;gap:12px;min-height:38px;
+  border-bottom:1px solid rgba(74,46,92,.55);
+  transition:background .15s;
+}
+.tl-row:hover{background:rgba(255,240,251,.035);border-radius:10px}
+.tl-row.head{min-height:28px;border-bottom:1px solid var(--line);font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.tl-row.head:hover{background:none}
+.tl-cell{min-width:0;padding:6px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-time{color:var(--muted);font-variant-numeric:tabular-nums}
+.tl-app{font-weight:600}
 .tl-title{color:var(--muted)}
-.tl-bar-wrap{padding:3px 8px 3px 0;display:flex;align-items:center;gap:8px;overflow:hidden}
-.tl-bar{height:3px;min-width:2px;flex-shrink:0;background:var(--accent)}
-.tl-bar.deep{background:var(--ok)}
-.tl-bar.shallow{background:var(--warn)}
-.tl-bar.glance{background:var(--rule)}
-.tl-dur{color:var(--ink);white-space:nowrap}
-.focus-tag{font-size:11px;color:var(--muted)}
-.focus-tag.deep{color:var(--ok)}
-.focus-tag.shallow{color:var(--warn)}
-.tl-row.idle-gap{min-height:24px}
-.tl-row.idle-gap:hover{background:none}
-.tl-row.idle-gap .tl-cell{grid-column:1/-1;color:var(--muted);font-family:var(--serif);font-style:italic}
+.tl-dur{color:var(--text);font-variant-numeric:tabular-nums}
+.bar-wrap{display:flex;align-items:center;gap:8px;min-width:0}
+.bar{height:5px;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--primary));min-width:6px;flex-shrink:0;box-shadow:0 0 12px rgba(255,143,201,.22)}
+.bar.deep{background:linear-gradient(90deg,#7ee7b0,var(--ok))}
+.bar.shallow{background:linear-gradient(90deg,#ffc56b,var(--warn))}
+.bar.glance{background:var(--line)}
+.tag{
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--muted);
+}
+.tag.deep{color:var(--ok);border-color:rgba(167,243,201,.35);background:rgba(167,243,201,.08)}
+.tag.shallow{color:var(--warn);border-color:rgba(255,208,138,.35);background:rgba(255,208,138,.08)}
+.tag.glance{color:var(--muted)}
+.idle-row{
+  display:flex;align-items:center;gap:9px;
+  padding:5px 2px;border-bottom:1px dashed rgba(74,46,92,.55);
+  font-family:"Caveat",cursive;font-size:19px;color:var(--muted);
+}
+.idle-row::before{content:"☾";color:var(--accent);font-size:15px}
+.legend{font-size:11.5px;color:var(--muted);margin-top:14px}
 
 /* apps */
-.app-list{display:flex;flex-direction:column}
-.app-row{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:14px;padding:7px 0;border-bottom:1px solid var(--rule)}
-.app-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.app-bar-track{height:4px;background:var(--rule)}
-.app-bar-fill{height:100%;background:var(--accent);transition:width .4s ease}
-.app-time{color:var(--muted);text-align:right}
+.app-list{display:grid;gap:2px}
+.app-row{
+  display:grid;grid-template-columns:minmax(90px,150px) minmax(0,1fr) 68px;
+  align-items:center;gap:14px;padding:9px 0;border-bottom:1px solid rgba(74,46,92,.45);
+}
+.app-row:last-child{border-bottom:0}
+.app-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-track{height:8px;border-radius:99px;background:rgba(255,240,251,.06);overflow:hidden}
+.app-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--primary));box-shadow:0 0 14px rgba(255,143,201,.25);transition:width .5s ease}
+.app-time{text-align:right;color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
 
 /* heatmap */
-.heatmap{display:flex;flex-direction:column;gap:4px}
-.heatmap-row{display:flex;align-items:center;gap:6px}
-.heatmap-label{font-size:11px;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
-.heatmap-cells{display:flex;gap:2px;flex:1}
-.hm-cell{flex:1;height:16px;background:var(--panel);position:relative}
-.hm-cell:hover::after{content:attr(data-tip);position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:11px;padding:2px 8px;white-space:nowrap;pointer-events:none;z-index:10}
-.hm-cell.l1{background:#5b3022}
-.hm-cell.l2{background:#a2412a}
-.hm-cell.l3{background:var(--accent)}
-.heatmap-hours{display:flex;gap:2px;padding-left:42px}
-.heatmap-hours span{flex:1;font-size:10px;color:var(--muted)}
+.hm-hours{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:3px;padding-left:40px;margin-bottom:6px}
+.hm-hours span{font-size:9.5px;color:var(--muted);text-align:center}
+.hm{display:grid;gap:5px}
+.hm-row{display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:6px}
+.hm-label{font-size:10.5px;color:var(--muted);text-align:right}
+.hm-cells{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:3px}
+.hm-cell{height:19px;border-radius:5px;background:rgba(255,240,251,.045);position:relative}
+.hm-cell.l1{background:rgba(216,180,254,.22)}
+.hm-cell.l2{background:rgba(216,180,254,.45)}
+.hm-cell.l3{background:rgba(255,143,201,.66)}
+.hm-cell.l4{background:var(--primary);box-shadow:0 0 10px rgba(255,143,201,.32)}
+.hm-cell:hover::after{
+  content:attr(data-tip);position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
+  background:#160c1e;border:1px solid var(--line);color:var(--text);
+  font-size:10.5px;padding:3px 8px;border-radius:8px;white-space:nowrap;z-index:6;pointer-events:none;
+}
+.hm-scale{display:flex;align-items:center;gap:6px;justify-content:flex-end;margin-top:10px;font-size:10.5px;color:var(--muted)}
+.hm-swatch{width:14px;height:14px;border-radius:4px}
 
 /* log */
-.log-view{line-height:1.8;color:var(--muted);max-height:360px;overflow-y:auto}
-.log-line{display:flex;gap:14px}
-.log-ts{flex-shrink:0;width:70px}
-.log-kind{flex-shrink:0;width:130px}
-.log-kind.focus{color:var(--blue)}
+.log{
+  max-height:440px;overflow:auto;display:grid;gap:1px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+}
+.log-line{display:grid;grid-template-columns:78px 138px minmax(0,1fr);gap:12px;padding:4px 6px;border-radius:8px}
+.log-line:hover{background:rgba(255,240,251,.035)}
+.log-ts{color:var(--muted)}
+.log-kind{color:var(--blue);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .log-kind.idle{color:var(--warn)}
 .log-kind.switch{color:var(--ok)}
-.log-body{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-kind.daemon{color:var(--accent)}
+.log-body{color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* notes: ruled like a notebook page */
-.hint{color:var(--muted);margin-top:-6px}
-#note-text{width:100%;min-height:280px;resize:vertical;font:inherit;line-height:28px;color:var(--ink);background-color:transparent;background-image:repeating-linear-gradient(transparent 0 27px,var(--rule) 27px 28px);border:0;border-left:2px solid var(--accent);padding:0 0 0 14px;outline:none}
-#note-text:focus-visible{outline:1px dotted var(--accent);outline-offset:6px}
-.note-status{font-family:var(--hand);font-size:18px;color:var(--muted);min-height:1.2em}
-
-/* status bar */
-.statusbar{border-top:1px solid var(--rule);padding:10px 0 18px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;font-size:11px;color:var(--muted)}
-.statusbar .dot{display:inline-block;width:7px;height:7px;margin-right:6px;background:var(--ok)}
-.statusbar .dot.red{background:var(--accent)}
-.statusbar .ml{margin-left:auto}
-
-/* sections */
-.section{display:none;flex-direction:column;gap:14px}
-.section.active{display:flex}
-
-/* offline gate */
-#offline-gate{display:none;flex:1;padding:10px 0 40px}
-#offline-gate.visible{display:flex}
-.gate-card{max-width:560px;border-left:3px solid var(--accent);padding:2px 0 2px 24px;display:flex;flex-direction:column;gap:14px}
-.gate-title{font-family:var(--serif);font-size:30px;line-height:1.15;font-weight:400}
-.gate-sub{color:var(--muted);line-height:1.7}
-.gate-steps{display:flex;flex-direction:column;gap:6px}
-.gate-step-label{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin-top:6px}
-.gate-cmd{background:var(--panel);padding:10px 14px;color:var(--ok);white-space:pre;overflow-x:auto}
-.gate-retry{font-size:11px;color:var(--muted)}
-.gate-promise{font-family:var(--hand);font-size:22px;line-height:1.15;color:var(--accent);transform:rotate(-1deg)}
-.gate-demo{align-self:flex-start}
-
-::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--rule)}
-
-@media (max-width:760px){
-  .frame{padding:0 16px}
-  .body{grid-template-columns:1fr;gap:18px}
-  .sidebar{position:static}
-  .keys{display:none}
-  .stats-bar{grid-template-columns:1fr 1fr;row-gap:16px}
-  .stat-cell:nth-child(3){border-left:0;padding-left:0}
-  .tl-row{grid-template-columns:56px 1fr 130px 60px}
-  .tl-title{display:none}
-  .app-row{grid-template-columns:100px 1fr 60px}
-  .log-kind{width:100px}
-  .margin-note{display:none}
+/* notes */
+.note-hint{color:var(--muted);font-size:13px;margin-bottom:14px}
+#note-text{
+  width:100%;min-height:300px;resize:vertical;
+  font-family:"Caveat",cursive;font-size:22px;line-height:34px;
+  color:var(--text);background:transparent;
+  border:0;border-left:2px solid rgba(255,143,201,.45);
+  padding:0 0 0 16px;outline:none;
 }
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.app-bar-fill{transition:none}}
+#note-text::placeholder{color:rgba(203,176,218,.5)}
+.note-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:12px;font-size:11.5px;color:var(--muted)}
+
+/* demo + gate */
+.demo-banner{
+  display:none;align-items:center;flex-wrap:wrap;gap:8px 12px;
+  padding:11px 16px;border-radius:16px;
+  border:1px dashed rgba(255,143,201,.55);background:rgba(255,143,201,.07);
+  font-size:13px;margin-bottom:18px;
+}
+.demo-banner.show{display:flex}
+.demo-banner button{margin-left:auto}
+.gate{display:none}
+.gate.show{display:block}
+.gate .panel{border-color:rgba(255,143,201,.35)}
+.gate-title{font-family:"Baloo 2",cursive;font-size:30px;line-height:1.1;letter-spacing:-.02em}
+.gate-sub{color:var(--muted);margin-top:8px;max-width:54ch}
+.gate-steps{display:grid;gap:12px;margin-top:20px}
+.step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:12px;align-items:start}
+.step-num{
+  display:grid;place-items:center;width:26px;height:26px;border-radius:9px;
+  background:rgba(255,143,201,.14);border:1px solid rgba(255,143,201,.35);
+  font-size:12px;color:var(--primary);margin-top:2px;
+}
+.step b{font-weight:600;font-size:13.5px}
+.step p{font-size:12px;color:var(--muted);margin:1px 0 6px}
+pre{
+  background:#160c1e;border:1px solid var(--line);border-radius:12px;
+  padding:10px 13px;font-size:12px;line-height:1.7;color:var(--ok);
+  white-space:pre;overflow-x:auto;
+}
+.gate-foot{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:20px}
+.gate-note{font-family:"Caveat",cursive;font-size:20px;color:var(--accent);transform:rotate(-.8deg)}
+
+/* footer */
+.foot{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 18px;
+  padding-top:20px;border-top:1px dashed var(--line);
+  font-size:11.5px;color:var(--muted);
+}
+.foot .credit{display:flex;align-items:center;gap:6px}
+.foot .heart{color:var(--primary)}
+
+@media (max-width:900px){
+  .stage{grid-template-columns:240px minmax(0,1fr);gap:20px}
+  .day-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:720px){
+  .stage{grid-template-columns:minmax(0,1fr);padding-top:16px}
+  .side{position:static;grid-row:1}
+  .profile{display:grid;grid-template-columns:66px minmax(0,1fr);gap:0 16px;align-items:center;padding:18px 18px 16px}
+  .avatar{grid-row:1 / span 3;margin:0}
+  .name{font-size:27px}
+  .role{font-size:19px}
+  .chips{grid-column:1 / -1;margin-top:12px}
+  .live{grid-column:1 / -1;margin-top:10px}
+  .nav{grid-column:1 / -1;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+  .nav-label{grid-column:1 / -1}
+  .mini{grid-column:1 / -1;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}
+  .side-actions{grid-column:1 / -1;margin-top:12px}
+  .tip{display:none}
+  .tl-row{grid-template-columns:54px minmax(0,1fr) 96px 80px;gap:8px}
+  .tl-title{display:none}
+  .bar-wrap .bar{display:none}
+  .tag{font-size:9px;padding:2px 6px}
+  .app-row{grid-template-columns:minmax(80px,110px) minmax(0,1fr) 56px;gap:10px}
+  .log-line{grid-template-columns:64px 96px minmax(0,1fr);gap:8px}
+  .day-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  h1{font-size:clamp(32px,9vw,44px)}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .section.active{animation:none}
+  .pulse{animation:none}
+  .app-fill{transition:none}
+}
 </style>
 </head>
-<body class="offline">
-<div class="frame">
-  <div class="titlebar">
-    <div>
-      <div class="tb-title">blackboxd</div>
-      <div class="tb-sub">activity recorder v0.1.0</div>
-    </div>
-    <div class="margin-note">
-      <svg viewBox="0 0 34 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 12C24 17 13 17 5 8"/><path d="M4 14L5 7l7 1"/></svg>
-      <span>that's the recording light</span>
-    </div>
-    <div class="tb-status"><span id="live-time">--:--:--</span></div>
-  </div>
+<body>
+<div class="stage">
 
-  <div class="body">
-    <div class="sidebar">
-      <div class="sidebar-label">views</div>
-      <div class="nav-item active" onclick="showSection('timeline',this)">timeline</div>
-      <div class="nav-item" onclick="showSection('apps',this)">apps<span class="nav-badge" id="nb-apps">—</span></div>
-      <div class="nav-item" onclick="showSection('heatmap',this)">heatmap</div>
-      <div class="nav-item" onclick="showSection('log',this)">raw log<span class="nav-badge" id="nb-log">—</span></div>
-      <div class="nav-item" onclick="showSection('notes',this)">notes</div>
-      <div class="sidebar-label">today</div>
-      <div class="stat-row"><span class="sk">active</span><span class="sv green" id="sb-active">—</span></div>
-      <div class="stat-row"><span class="sk">idle</span><span class="sv" id="sb-idle">—</span></div>
-      <div class="stat-row"><span class="sk">switches</span><span class="sv" id="sb-switches">—</span></div>
-      <div class="stat-row"><span class="sk">deep</span><span class="sv green" id="sb-deep">—</span></div>
-      <div class="stat-row"><span class="sk">events</span><span class="sv" id="sb-events">—</span></div>
-      <div class="sidebar-label">daemon</div>
-      <div class="stat-row"><span class="sk">status</span><span class="sv" id="sb-status">connecting…</span></div>
-      <div class="stat-row"><span class="sk">db</span><span class="sv" id="sb-db">—</span></div>
-      <div class="keys">keys 1 to 5 jump between views</div>
-    </div>
+  <aside class="side">
+    <div class="profile">
+      <div class="avatar" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="16" cy="16" r="10.5"/>
+          <circle cx="16" cy="16" r="4"/>
+          <path d="M16 2v3M16 27v3M2 16h3M27 16h3"/>
+        </svg>
+      </div>
+      <div class="name">blackboxd</div>
+      <div class="role">a flight recorder for your day</div>
+      <div class="chips">
+        <span class="chip">python</span><span class="chip">go</span><span class="chip">sqlite</span><span class="chip">local only</span>
+      </div>
+      <div class="live"><span class="dot off pulse" id="side-dot"></span><span id="side-status">connecting…</span></div>
 
-    <div class="main" id="main-panel">
+      <nav class="nav" aria-label="Views">
+        <div class="nav-label">views</div>
+        <button class="nav-item active" data-view="timeline"><span class="key">1</span> timeline</button>
+        <button class="nav-item" data-view="apps"><span class="key">2</span> apps <span class="badge" id="nb-apps">—</span></button>
+        <button class="nav-item" data-view="heatmap"><span class="key">3</span> heatmap</button>
+        <button class="nav-item" data-view="log"><span class="key">4</span> raw log <span class="badge" id="nb-log">—</span></button>
+        <button class="nav-item" data-view="notes"><span class="key">5</span> notes</button>
+      </nav>
 
-      <div class="demo-banner" id="demo-banner" hidden>Sample data. None of this is real activity.<button class="linkbtn" onclick="exitDemo()">back to the real thing</button></div>
-
-      <div id="offline-gate">
-        <div class="gate-card">
-          <div class="gate-title">Start BlackboxD first</div>
-          <div class="gate-sub">The backend isn't running. Start it on your own machine and this page will find it by itself.</div>
-          <div class="gate-promise">this page only talks to localhost:8080. nothing gets uploaded.</div>
-          <div class="gate-steps">
-            <div class="gate-step-label">1. install</div>
-            <div class="gate-cmd">git clone https://github.com/Ivoryy06/BlackboxD.git
-cd BlackboxD && chmod +x install.sh && ./install.sh</div>
-            <div class="gate-step-label">2. start the daemon</div>
-            <div class="gate-cmd">blackboxd start</div>
-            <div class="gate-step-label">3. start the API</div>
-            <div class="gate-cmd">cd go-api && ./blackboxd-api</div>
-          </div>
-          <div class="gate-retry">Looking for the backend every 5 seconds.</div>
-          <button class="linkbtn gate-demo" onclick="enterDemo()">or look around with sample data first</button>
-        </div>
+      <div class="mini">
+        <div class="mini-row"><span>active</span><span class="good" id="mb-active">—</span></div>
+        <div class="mini-row"><span>idle</span><span id="mb-idle">—</span></div>
+        <div class="mini-row"><span>switches</span><span class="warm" id="mb-switches">—</span></div>
+        <div class="mini-row"><span>deep</span><span class="good" id="mb-deep">—</span></div>
+        <div class="mini-row"><span>events</span><span id="mb-events">—</span></div>
+        <div class="mini-row"><span>daemon</span><span id="mb-status">connecting…</span></div>
       </div>
 
-      <div class="section active" id="s-timeline">
-        <div class="card">
-          <div class="panel-header">
-            <span class="panel-title">Timeline</span>
-            <span class="panel-subtitle" id="tl-date-label">—</span>
-            <div class="panel-controls">
-              <button class="btn active" onclick="setFilter('all',this)">all</button>
-              <button class="btn" onclick="setFilter('deep',this)">deep</button>
-              <button class="btn" onclick="setFilter('idle',this)">idle</button>
+      <div class="side-actions">
+        <a class="ghost" href="https://github.com/Ivoryy06/BlackboxD" target="_blank" rel="noopener">source ↗</a>
+        <button class="ghost" id="demo-toggle" type="button">sample data</button>
+      </div>
+    </div>
+    <div class="tip">press 1 to 5 to flip between views</div>
+  </aside>
+
+  <main class="main">
+
+    <section class="hero">
+      <span class="eyebrow">today, reconstructed</span>
+      <h1>where did <span class="pink">the day</span> go?</h1>
+      <div class="hero-date" id="hero-date">—</div>
+      <p class="hero-summary" id="hero-summary">Waiting for the first events.</p>
+      <div class="hero-line">
+        <span class="clock" id="live-clock">--:--:--</span>
+        <span class="bow" aria-hidden="true">✦</span>
+        <span id="hero-source">looking for the daemon on localhost:8080</span>
+      </div>
+
+      <div class="day-stats">
+        <div class="stat"><div class="k">active</div><div class="v good" id="sc-active">—</div><div class="s">hours:min</div></div>
+        <div class="stat"><div class="k">deep sessions</div><div class="v" id="sc-deep">—</div><div class="s">25 min or more, unbroken</div></div>
+        <div class="stat"><div class="k">switches</div><div class="v warm" id="sc-switches">—</div><div class="s">context changes</div></div>
+        <div class="stat"><div class="k">idle</div><div class="v" id="sc-idle">—</div><div class="s">hours:min</div></div>
+      </div>
+    </section>
+
+    <div class="demo-banner" id="demo-banner">
+      <span>Sample data — none of this is real activity.</span>
+      <button class="ghost" id="demo-exit" type="button">back to the real thing</button>
+    </div>
+
+    <div class="gate" id="gate">
+      <div class="panel">
+        <div class="gate-title">start the recorder first</div>
+        <p class="gate-sub" id="gate-sub">The backend isn't running. Start it on this machine and the page will find it by itself.</p>
+        <div class="gate-steps">
+          <div class="step">
+            <span class="step-num">1</span>
+            <div>
+              <b>install the daemon</b>
+              <p>Python 3.11 or newer.</p>
+              <pre>git clone https://github.com/Ivoryy06/BlackboxD.git
+cd BlackboxD
+pip install -e .</pre>
             </div>
           </div>
-          <p class="day-summary" id="day-summary"></p>
-          <div class="stats-bar">
-            <div class="stat-cell"><span class="label">active</span><span class="value green" id="sc-active">—</span><span class="sub">hours:min</span></div>
-            <div class="stat-cell"><span class="label">deep sessions</span><span class="value" id="sc-deep">—</span><span class="sub">25 min or more, unbroken</span></div>
-            <div class="stat-cell"><span class="label">switches</span><span class="value amber" id="sc-switches">—</span><span class="sub">context changes</span></div>
-            <div class="stat-cell"><span class="label">idle</span><span class="value" id="sc-idle">—</span><span class="sub">hours:min</span></div>
-          </div>
-          <div class="timeline" id="timeline-rows">
-            <div class="tl-row header">
-              <div class="tl-cell">time</div><div class="tl-cell">app</div><div class="tl-cell tl-title">title</div>
-              <div class="tl-cell">duration</div><div class="tl-cell">focus</div>
+          <div class="step">
+            <span class="step-num">2</span>
+            <div>
+              <b>start recording</b>
+              <p>Hyprland and GNOME are auto-detected; <code>--backend mock</code> is nice for a test run.</p>
+              <pre>blackboxd --backend hyprland</pre>
             </div>
           </div>
-          <p class="legend">glance: under 1 min. shallow: 1 to 5 min. sustained: 5 to 25 min. deep: 25 min or more without switching.</p>
-        </div>
-      </div>
-
-      <div class="section" id="s-apps">
-        <div class="card">
-          <div class="panel-header"><span class="panel-title">Applications</span><span class="panel-subtitle">where today's time went</span></div>
-          <div class="app-list" id="app-list-rows"></div>
-        </div>
-      </div>
-
-      <div class="section" id="s-heatmap">
-        <div class="card">
-          <div class="panel-header"><span class="panel-title">Heatmap</span><span class="panel-subtitle">last 7 days, by hour</span></div>
-          <div class="heatmap-hours" id="hm-hour-labels"></div>
-          <div class="heatmap" id="heatmap-grid"></div>
-        </div>
-      </div>
-
-      <div class="section" id="s-log">
-        <div class="card">
-          <div class="panel-header">
-            <span class="panel-title">Raw log</span>
-            <span class="panel-subtitle" id="log-subtitle">—</span>
-            <div class="panel-controls">
-              <button class="btn active" onclick="setLogFilter('all',this)">all</button>
-              <button class="btn" onclick="setLogFilter('focus',this)">focus</button>
-              <button class="btn" onclick="setLogFilter('idle',this)">idle</button>
+          <div class="step">
+            <span class="step-num">3</span>
+            <div>
+              <b>open a dashboard</b>
+              <p>Either serve it straight from SQLite, or run the Go API on port 8080.</p>
+              <pre>blackboxd-report serve
+# or
+cd go-api && go build -o blackboxd-api . && ./blackboxd-api</pre>
             </div>
           </div>
-          <div class="log-view" id="log-view"></div>
         </div>
-      </div>
-
-      <div class="section" id="s-notes">
-        <div class="card">
-          <div class="panel-header"><span class="panel-title">Notes</span><span class="panel-subtitle">for today</span></div>
-          <p class="hint">Things worth remembering. Saved only in this browser, one note per day.</p>
-          <textarea id="note-text" aria-label="Notes for today" placeholder="what were you actually trying to get done?"></textarea>
-          <span class="note-status" id="note-status"></span>
+        <div class="gate-foot">
+          <button class="ghost" id="gate-demo" type="button">look around with sample data</button>
+          <span class="gate-note">nothing leaves this machine ✿</span>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="statusbar">
-    <div class="seg"><span class="dot red" id="status-dot"></span><span id="status-text">connecting…</span></div>
-    <div class="seg" id="sb-db-path">db: —</div>
-    <div class="seg ml"><span id="sb-event-count">— events</span> · v0.1, expect rough edges · <a href="https://github.com/Ivoryy06/BlackboxD">source</a></div>
-  </div>
+    <section class="section active" id="view-timeline">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Timeline</span>
+          <span class="panel-sub" id="tl-date">—</span>
+          <div class="filters">
+            <button class="filter active" data-filter="all">all</button>
+            <button class="filter" data-filter="deep">deep</button>
+            <button class="filter" data-filter="idle">idle</button>
+          </div>
+        </div>
+        <div class="timeline" id="timeline">
+          <div class="tl-row head">
+            <div class="tl-cell">time</div>
+            <div class="tl-cell">app</div>
+            <div class="tl-cell">title</div>
+            <div class="tl-cell">duration</div>
+            <div class="tl-cell">focus</div>
+          </div>
+        </div>
+        <p class="legend">glance: under 1 min · shallow: 1 to 5 min · sustained: 5 to 25 min · deep: 25 min or more without switching.</p>
+      </div>
+    </section>
+
+    <section class="section" id="view-apps">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Apps</span>
+          <span class="panel-sub">where today's time went</span>
+        </div>
+        <div class="app-list" id="app-list"></div>
+      </div>
+    </section>
+
+    <section class="section" id="view-heatmap">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Heatmap</span>
+          <span class="panel-sub">last 7 days, by hour</span>
+        </div>
+        <div class="hm-hours" id="hm-hours"></div>
+        <div class="hm" id="hm"></div>
+        <div class="hm-scale">
+          less
+          <span class="hm-swatch" style="background:rgba(255,240,251,.045)"></span>
+          <span class="hm-swatch" style="background:rgba(216,180,254,.22)"></span>
+          <span class="hm-swatch" style="background:rgba(216,180,254,.45)"></span>
+          <span class="hm-swatch" style="background:rgba(255,143,201,.66)"></span>
+          <span class="hm-swatch" style="background:var(--primary)"></span>
+          more
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="view-log">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Raw log</span>
+          <span class="panel-sub" id="log-sub">—</span>
+          <div class="filters">
+            <button class="filter active" data-log="all">all</button>
+            <button class="filter" data-log="focus">focus</button>
+            <button class="filter" data-log="idle">idle</button>
+          </div>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </section>
+
+    <section class="section" id="view-notes">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Notes</span>
+          <span class="panel-sub">for today</span>
+        </div>
+        <p class="note-hint">Things worth remembering. Saved in this browser only, one page per day.</p>
+        <textarea id="note-text" aria-label="Notes for today" placeholder="what were you actually trying to get done?"></textarea>
+        <div class="note-foot">
+          <span id="note-status"></span>
+          <span>stays in localStorage</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>blackboxd v0.1 · expect rough edges · <a href="https://github.com/Ivoryy06/BlackboxD">source</a></span>
+      <span class="credit">made by <a href="https://github.com/Ivoryy06">Ivoryy06</a> <span class="heart">♡</span></span>
+    </footer>
+
+  </main>
 </div>
+
 <script>
-const API = 'http://localhost:8080';
-let allEvents = [], heatEvents = null, connected = false, demo = false, tlFilter = 'all', logFilter = 'all';
+/* BLACKBOXD_INLINE_DATA — replaced by `blackboxd dashboard --export` */
+const INLINE_DATA = null;
 
-// ── utils ──
-function fmtTime(ts){ const d=new Date(ts*1000); return d.toTimeString().slice(0,8); }
-function fmtDur(s){
-  if(s<60) return s+'s';
-  if(s<3600) return Math.floor(s/60)+'m '+String(s%60).padStart(2,'0')+'s';
-  return Math.floor(s/3600)+'h '+String(Math.floor((s%3600)/60)).padStart(2,'0')+'m';
-}
-function fmtHM(s){ return Math.floor(s/3600)+':'+String(Math.floor((s%3600)/60)).padStart(2,'0'); }
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// Where the data comes from. An exported snapshot has it baked in; the
+// local Python server (port 9100) has /data routes; everything else looks
+// for the Go API.
+const API = INLINE_DATA ? null : (location.port === '9100' ? '' : 'http://localhost:8080');
+const views = ['timeline','apps','heatmap','log','notes'];
+
+let todayEvents = [];
+let weekEvents = [];
+let connected = false;
+let demo = false;
+let tlFilter = 'all';
+let logFilter = 'all';
+let lastStats = null;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const longDate = d => d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+const hm = s => `${Math.floor(s/3600)}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}`;
 
-// ── connection detection ──
+function fmtTime(ts){ return new Date(ts*1000).toTimeString().slice(0,8); }
+function fmtDur(s){
+  if (s < 60) return Math.round(s) + 's';
+  if (s < 3600) return Math.floor(s/60) + 'm ' + String(Math.round(s%60)).padStart(2,'0') + 's';
+  return Math.floor(s/3600) + 'h ' + String(Math.floor((s%3600)/60)).padStart(2,'0') + 'm';
+}
+function focusLabel(dur){
+  if (dur >= 1500) return 'deep';
+  if (dur >= 300) return 'sustained';
+  if (dur >= 60) return 'shallow';
+  return 'glance';
+}
+
+/* ---------- data ---------- */
+function dayBounds(d){
+  const x = new Date(d || Date.now()); x.setHours(0,0,0,0);
+  return [x.getTime()/1000, x.getTime()/1000 + 86400];
+}
+function weekBounds(){
+  const x = new Date(); x.setHours(0,0,0,0);
+  return x.getTime()/1000 - 6*86400;
+}
+
+async function getJSON(path){
+  const r = await fetch(API + path, {signal: AbortSignal.timeout(4000)});
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
 async function tryConnect(){
-  if(demo) return;
+  if (demo) return;
+  if (INLINE_DATA){ setConnected(true, 'exported snapshot'); loadData(); return; }
+
+  // A https page can't call http://localhost — browsers block it. Say so
+  // instead of silently sitting on the offline gate.
+  if (location.protocol === 'https:'){
+    setConnected(false, null, 'This page is served over https, so the browser blocks its own local API. Run <code>blackboxd-report serve</code> and use <b>http://127.0.0.1:9100</b>, or open the file directly.');
+    return;
+  }
   try {
-    const r = await fetch(API+'/api/health', {signal: AbortSignal.timeout(2000)});
-    if(!r.ok) throw new Error();
-    const d = await r.json();
-    setConnected(true, d.db);
+    if (API === ''){
+      const d = await getJSON('/data/health');
+      setConnected(true, d.db || 'sqlite');
+    } else {
+      const d = await getJSON('/api/health');
+      setConnected(true, d.db || 'sqlite');
+    }
     await loadData();
   } catch {
     setConnected(false, null);
   }
 }
 
-function setConnected(ok, dbPath){
+function setConnected(ok, dbPath, note){
   connected = ok;
-  const gate = document.getElementById('offline-gate');
-  const sections = document.querySelectorAll('.section');
   document.body.classList.toggle('offline', !ok);
-  if(ok){
-    gate.classList.remove('visible');
-    sections.forEach(s=>s.style.display='');
-    document.getElementById('status-dot').classList.remove('red');
-    document.getElementById('status-text').textContent = 'recording';
-    document.getElementById('sb-status').textContent = 'connected';
-    document.getElementById('sb-db-path').textContent = 'db: '+(dbPath||'—');
-    document.getElementById('sb-db').textContent = dbPath ? dbPath.replace(/.*\//,'') : '—';
-  } else {
-    gate.classList.add('visible');
-    sections.forEach(s=>s.style.display='none');
-    document.getElementById('status-dot').classList.add('red');
-    document.getElementById('status-text').textContent = 'backend offline';
-    document.getElementById('sb-status').textContent = 'offline';
-  }
+  $('gate').classList.toggle('show', !ok && !demo);
+  document.querySelectorAll('.section').forEach(s => s.style.display = (ok || demo) ? '' : 'none');
+  $('side-dot').className = 'dot pulse ' + (ok || demo ? '' : 'off');
+  $('side-status').textContent = demo ? 'sample data' : ok ? 'recording' : 'backend offline';
+  $('mb-status').textContent = demo ? 'demo' : ok ? 'connected' : 'offline';
+  $('hero-source').textContent = demo ? 'sample data, refreshed from nothing'
+    : ok ? 'reading ' + (dbPath || 'sqlite') + ' · refreshed every 5s'
+    : 'looking for the daemon on localhost:8080';
+  if (note) $('gate-sub').innerHTML = note;
 }
 
-// ── data loading ──
 async function loadData(){
-  const today = new Date(); today.setHours(0,0,0,0);
-  const since = today.getTime()/1000;
-  const [evResp, statsResp] = await Promise.all([
-    fetch(API+'/api/events?since='+since+'&limit=2000'),
-    fetch(API+'/api/stats'),
+  if (INLINE_DATA){
+    const now = new Date();
+    const [since, until] = dayBounds();
+    todayEvents = INLINE_DATA.events.filter(e => e.timestamp >= since && e.timestamp < until);
+    weekEvents = INLINE_DATA.events;
+    lastStats = INLINE_DATA.stats;
+    renderAll();
+    return;
+  }
+  const [since] = dayBounds();
+  const weekSince = weekBounds();
+  const base = API === '' ? '/data' : '/api';
+  const [today, week, stats] = await Promise.all([
+    getJSON(`${base}/events?since=${since}&limit=5000`),
+    getJSON(`${base}/events?since=${weekSince}&limit=40000`),
+    getJSON(`${base}/stats`),
   ]);
-  allEvents = await evResp.json();
-  const stats = await statsResp.json();
-
-  document.getElementById('sb-event-count').textContent = stats.total_events+' total events';
-  document.getElementById('nb-log').textContent = allEvents.length;
-  document.getElementById('tl-date-label').textContent = longDate(today);
-
+  todayEvents = today;
+  weekEvents = week;
+  lastStats = stats;
   renderAll();
 }
 
-// ── demo mode: sample data so the page can be looked at without installing anything ──
+/* ---------- demo ---------- */
 function makeDemo(){
-  let seed = 7;
+  let seed = 11;
   const rnd = () => { seed = (seed*1664525 + 1013904223) % 4294967296; return seed/4294967296; };
   const now = Math.floor(Date.now()/1000);
   const plan = [
-    [38,'Code','blackboxd — listener.py'], [6,'Firefox','Rust docs: std::fs'], [52,'Code','blackboxd — dashboard'],
-    ['idle',9], [4,'Terminal','cargo build --release'], [27,'Firefox','Stack Overflow'], [3,'Spotify','Liked songs'],
-    [31,'Code','go-api — main.go'], ['idle',14], [5,'Discord','general'], [44,'Obsidian','notes: week 41'], [8,'Firefox','GitHub'],
-    [2,'Terminal','git status'], [19,'Code','rust-exporter — lib.rs']
+    [42,'Code','blackboxd — dashboard'], [5,'Firefox','Rust docs: std::fs'],
+    [55,'Code','blackboxd — reconstructor'], ['idle',12], [7,'Terminal','pytest -q'],
+    [33,'Firefox','GitHub · pull request'], [4,'Spotify','liked songs'],
+    [38,'Code','go-api — main.go'], ['idle',9], [6,'Discord','general'],
+    [46,'Obsidian','notes: week 44'], [8,'Firefox','MDN'],
+    [3,'Terminal','git status'], [22,'Code','Echo — App.jsx'], ['idle',17],
+    [12,'Figma','portfolio polish'], [9,'Firefox','Are.na']
   ];
-  const total = plan.reduce((a,p)=>a+(p[0]==='idle'?p[1]:p[0]),0)*60;
-  let t = now - total, today = [];
-  for(const p of plan){
-    if(p[0]==='idle'){ today.push({kind:'idle_start',timestamp:t,idle_seconds:p[1]*60}); t += p[1]*60; today.push({kind:'idle_end',timestamp:t}); }
-    else { today.push({kind:'window_focus',app_name:p[1],window_title:p[2],timestamp:t}); t += p[0]*60; }
-  }
-  const week = [...today];
-  // earlier days are placed by local midnight so the busy hours land on sensible local hours
-  const mid = new Date(); mid.setHours(0,0,0,0);
-  const midTs = Math.floor(mid.getTime()/1000);
-  for(let d=1; d<=6; d++){
-    for(let h=8; h<=23; h++){
-      const n = Math.floor(rnd()*rnd()*(h>=9&&h<=18?40:18));
-      for(let i=0;i<n;i++) week.push({kind:'window_focus',app_name:'x',timestamp:midTs - d*86400 + h*3600 + i});
+  const total = plan.reduce((a,p) => a + (p[0] === 'idle' ? p[1] : p[0]), 0) * 60;
+  let t = now - total;
+  const today = [];
+  for (const p of plan){
+    if (p[0] === 'idle'){
+      today.push({id:0,kind:'idle_start',timestamp:t,idle_seconds:p[1]*60});
+      t += p[1]*60;
+      today.push({id:0,kind:'idle_end',timestamp:t,idle_seconds:p[1]*60});
+    } else {
+      today.push({id:0,kind:'window_focus',app_name:p[1],app_class:p[1].toLowerCase(),window_title:p[2],timestamp:t});
+      t += p[0]*60;
     }
   }
-  return {today, week};
+  const week = [...today];
+  const mid = new Date(); mid.setHours(0,0,0,0);
+  const midTs = Math.floor(mid.getTime()/1000);
+  for (let d = 1; d <= 6; d++){
+    for (let h = 7; h <= 23; h++){
+      const busy = h >= 9 && h <= 18;
+      const n = Math.floor(rnd()*rnd()*(busy ? 46 : 16));
+      for (let i = 0; i < n; i++){
+        week.push({id:0,kind:'window_focus',app_name:busy?'Code':'Firefox',app_class:'x',
+          window_title:'',timestamp:midTs - d*86400 + h*3600 + i*45});
+      }
+    }
+  }
+  return {today, week, stats:{total_events:week.length}};
 }
 function enterDemo(){
-  demo = true; connected = true;
+  demo = true;
+  const d = makeDemo();
+  todayEvents = d.today; weekEvents = d.week; lastStats = d.stats;
   document.body.classList.remove('offline');
-  document.getElementById('offline-gate').classList.remove('visible');
-  document.querySelectorAll('.section').forEach(s=>s.style.display='');
-  document.getElementById('demo-banner').hidden = false;
-  document.getElementById('status-dot').classList.remove('red');
-  document.getElementById('status-text').textContent = 'sample data';
-  document.getElementById('sb-status').textContent = 'demo';
-  document.getElementById('sb-db').textContent = 'none';
-  document.getElementById('sb-db-path').textContent = 'db: none (demo)';
-  const d = makeDemo(); allEvents = d.today; heatEvents = d.week;
-  document.getElementById('sb-event-count').textContent = d.week.length+' sample events';
-  document.getElementById('nb-log').textContent = allEvents.length;
-  document.getElementById('tl-date-label').textContent = longDate(new Date());
+  $('demo-banner').classList.add('show');
+  $('demo-toggle').textContent = 'leave sample data';
+  $('side-dot').className = 'dot pulse';
+  $('side-status').textContent = 'sample data';
+  $('mb-status').textContent = 'demo';
+  $('hero-source').textContent = 'sample data, refreshed from nothing';
+  $('gate').classList.remove('show');
+  document.querySelectorAll('.section').forEach(s => s.style.display = '');
   renderAll();
 }
 function exitDemo(){
-  demo = false; connected = false; heatEvents = null; allEvents = [];
-  document.getElementById('demo-banner').hidden = true;
+  demo = false;
+  todayEvents = []; weekEvents = []; lastStats = null;
+  $('demo-banner').classList.remove('show');
+  $('demo-toggle').textContent = 'sample data';
+  $('gate-sub').textContent = "The backend isn't running. Start it on this machine and the page will find it by itself.";
   setConnected(false, null);
   tryConnect();
 }
 
-// ── session reconstruction ──
+/* ---------- sessions ---------- */
 function buildSessions(events){
-  const sessions = [];
+  const list = [];
   let cur = null;
-  for(const e of events){
-    if(e.kind === 'window_focus' && e.app_name){
-      if(cur) { cur.end = e.timestamp; sessions.push(cur); }
-      cur = {app: e.app_name, title: e.window_title||'', start: e.timestamp, end: e.timestamp};
-    } else if(e.kind === 'idle_start'){
-      if(cur) { cur.end = e.timestamp; sessions.push(cur); cur = null; }
-      sessions.push({idle: true, start: e.timestamp, end: e.timestamp, dur: e.idle_seconds||0});
-    } else if(e.kind === 'idle_end' && cur == null){
-      // resume after idle: the next focus event will create a new session
+  let idle = null;
+
+  const close = end => {
+    if (!cur) return;
+    const dur = Math.max(0, end - cur.start);
+    if (dur >= 1) { cur.dur = dur; list.push(cur); }
+    cur = null;
+  };
+  const closeIdle = end => {
+    if (!idle) return;
+    const dur = idle.given || Math.max(0, end - idle.start);
+    if (dur > 0) list.push({idle:true, start:idle.start, end:idle.start+dur, dur});
+    idle = null;
+  };
+
+  for (const e of events){
+    if (e.kind === 'window_focus'){
+      if (idle) closeIdle(e.timestamp);
+      const app = e.app_name || e.app_class || 'unknown';
+      const cls = e.app_class || app;
+      if (cur && cur.cls === cls){
+        // A long silent gap means the daemon missed an idle event, so start
+        // a fresh session rather than stretching one across the gap.
+        if (e.timestamp - cur.end > 300) close(cur.end);
+        if (cur && cur.cls === cls){
+          if (e.window_title && !cur.titles.includes(e.window_title)) cur.titles.push(e.window_title);
+          cur.title = e.window_title || cur.title;
+          cur.end = e.timestamp;
+        } else {
+          cur = {app, cls, title:e.window_title || '', titles: e.window_title ? [e.window_title] : [], start:e.timestamp, end:e.timestamp, dur:0};
+        }
+      } else {
+        close(e.timestamp);
+        cur = {app, cls, title:e.window_title || '', titles: e.window_title ? [e.window_title] : [], start:e.timestamp, end:e.timestamp, dur:0};
+      }
+    } else if (e.kind === 'idle_start'){
+      close(e.timestamp);
+      idle = {start:e.timestamp, given: 0};
+    } else if (e.kind === 'idle_end'){
+      if (!idle) idle = {start: e.timestamp - (e.idle_seconds || 0), given: 0};
+      idle.given = e.idle_seconds || 0;
+      closeIdle(e.timestamp);
+    } else if (e.kind === 'lock_start' || e.kind === 'daemon_stop'){
+      close(e.timestamp);
+      closeIdle(e.timestamp);
     }
   }
-  if(cur){ cur.end = Date.now()/1000; sessions.push(cur); }
-  return sessions;
+  const now = Date.now()/1000;
+  close(now);
+  if (idle) closeIdle(now);
+  list.sort((a,b) => a.start - b.start);
+  return list;
 }
 
-function focusLabel(dur){
-  if(dur >= 1500) return 'deep';
-  if(dur >= 300)  return 'sustained';
-  if(dur >= 60)   return 'shallow';
-  return 'glance';
-}
-
-// ── the day in one plain sentence ──
-function renderSummary(sessions){
-  const el = document.getElementById('day-summary');
-  const real = sessions.filter(s=>!s.idle);
-  if(!real.length){ el.textContent = 'Nothing recorded yet today.'; return; }
-  const totals = {}; let longest = real[0], active = 0;
-  for(const s of real){
-    const d = s.end - s.start; active += d;
-    totals[s.app] = (totals[s.app]||0) + d;
-    if(d > longest.end - longest.start) longest = s;
+function summarise(sessions){
+  const real = sessions.filter(s => !s.idle);
+  if (!real.length) return 'Nothing recorded yet today. Start the daemon and this fills in by itself.';
+  const totals = {};
+  let active = 0, longest = real[0];
+  for (const s of real){
+    active += s.dur;
+    totals[s.app] = (totals[s.app] || 0) + s.dur;
+    if (s.dur > longest.dur) longest = s;
   }
-  const top = Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
-  el.textContent = 'You were active for '+fmtDur(Math.round(active))+', mostly in '+top[0]+' ('+fmtDur(Math.round(top[1]))+'). '
-    + 'Your longest stretch was '+fmtDur(Math.round(longest.end-longest.start))+' in '+longest.app+', starting at '+fmtTime(longest.start).slice(0,5)+'.';
+  const top = Object.entries(totals).sort((a,b) => b[1]-a[1])[0];
+  return `You were active for <strong>${fmtDur(active)}</strong>, mostly in <strong>${esc(top[0])}</strong> (${fmtDur(top[1])}). `
+    + `The longest stretch was <strong>${fmtDur(longest.dur)}</strong> in ${esc(longest.app)}, starting at ${fmtTime(longest.start).slice(0,5)}.`;
 }
 
-// ── render timeline ──
+/* ---------- render ---------- */
+function renderAll(){ renderSummary(); renderTimeline(); renderApps(); renderHeatmap(); renderLog(); }
+
+function renderSummary(){
+  const sessions = buildSessions(todayEvents);
+  const active = sessions.filter(s => !s.idle).reduce((a,s) => a + s.dur, 0);
+  const idle = sessions.filter(s => s.idle).reduce((a,s) => a + s.dur, 0);
+  const deep = sessions.filter(s => !s.idle && focusLabel(s.dur) === 'deep').length;
+  const switches = sessions.filter(s => !s.idle).length;
+  const events = todayEvents.length;
+
+  $('hero-date').textContent = longDate(new Date());
+  $('tl-date').textContent = longDate(new Date());
+  $('hero-summary').innerHTML = summarise(sessions);
+  $('sc-active').textContent = hm(active);
+  $('sc-idle').textContent = hm(idle);
+  $('sc-deep').textContent = deep;
+  $('sc-switches').textContent = switches;
+  $('mb-active').textContent = hm(active);
+  $('mb-idle').textContent = hm(idle);
+  $('mb-deep').textContent = deep;
+  $('mb-switches').textContent = switches;
+  $('mb-events').textContent = events;
+  if (lastStats && lastStats.total_events != null) $('mb-events').textContent = events + ' / ' + lastStats.total_events;
+}
+
 function renderTimeline(){
-  const sessions = buildSessions(allEvents);
-  renderSummary(sessions);
-  const maxDur = Math.max(...sessions.filter(s=>!s.idle).map(s=>s.end-s.start), 1);
+  const sessions = buildSessions(todayEvents);
+  const box = $('timeline');
+  box.querySelectorAll('.tl-row:not(.head), .idle-row').forEach(n => n.remove());
+  const maxDur = Math.max(1, ...sessions.filter(s => !s.idle).map(s => s.dur));
 
-  let activeSec=0, idleSec=0, switches=0, deep=0;
-  for(const s of sessions){
-    const dur = s.end - s.start;
-    if(s.idle){ idleSec += dur; }
-    else { activeSec += dur; switches++; if(focusLabel(dur)==='deep') deep++; }
-  }
-
-  document.getElementById('sc-active').textContent   = fmtHM(activeSec);
-  document.getElementById('sc-idle').textContent     = fmtHM(idleSec);
-  document.getElementById('sc-switches').textContent = switches;
-  document.getElementById('sc-deep').textContent     = deep;
-  document.getElementById('sb-active').textContent   = fmtHM(activeSec);
-  document.getElementById('sb-idle').textContent     = fmtHM(idleSec);
-  document.getElementById('sb-switches').textContent = switches;
-  document.getElementById('sb-deep').textContent     = deep;
-  document.getElementById('sb-events').textContent   = allEvents.length;
-
-  const container = document.getElementById('timeline-rows');
-  // keep header
-  while(container.children.length > 1) container.removeChild(container.lastChild);
-
-  for(const s of sessions){
-    const dur = s.end - s.start;
-    if(s.idle){
-      if(tlFilter !== 'all' && tlFilter !== 'idle') continue;
+  for (const s of sessions){
+    if (s.idle){
+      if (tlFilter === 'deep') continue;
       const row = document.createElement('div');
-      row.className = 'tl-row idle-gap';
-      row.innerHTML = `<div class="tl-cell">idle for ${fmtDur(Math.round(s.dur || dur))}</div>`;
-      container.appendChild(row);
+      row.className = 'idle-row';
+      row.textContent = `idle for ${fmtDur(s.dur)}`;
+      box.appendChild(row);
       continue;
     }
-    const focus = focusLabel(dur);
-    if(tlFilter === 'deep' && focus !== 'deep') continue;
-    if(tlFilter === 'idle') continue;
-    const barPct = Math.max(4, Math.round((dur/maxDur)*100));
+    const focus = focusLabel(s.dur);
+    if (tlFilter === 'deep' && focus !== 'deep') continue;
+    if (tlFilter === 'idle') continue;
     const row = document.createElement('div');
     row.className = 'tl-row';
+    const width = Math.max(8, Math.round(s.dur / maxDur * 92));
     row.innerHTML =
-      `<div class="tl-cell tl-time">${fmtTime(s.start)}</div>`+
-      `<div class="tl-cell tl-app">${esc(s.app)}</div>`+
-      `<div class="tl-cell tl-title">${esc(s.title)}</div>`+
-      `<div class="tl-bar-wrap"><div class="tl-bar ${focus}" style="width:${Math.round(barPct*0.7)}px"></div><span class="tl-dur">${fmtDur(Math.round(dur))}</span></div>`+
-      `<div class="tl-cell tl-focus"><span class="focus-tag ${focus}">${focus}</span></div>`;
-    container.appendChild(row);
+      `<div class="tl-cell tl-time">${fmtTime(s.start)}</div>` +
+      `<div class="tl-cell tl-app">${esc(s.app)}</div>` +
+      `<div class="tl-cell tl-title">${esc(s.title || '')}</div>` +
+      `<div class="bar-wrap"><span class="tl-cell tl-dur">${fmtDur(s.dur)}</span><span class="bar ${focus}" style="width:${width}px"></span></div>` +
+      `<div class="tl-cell"><span class="tag ${focus}">${focus}</span></div>`;
+    box.appendChild(row);
+  }
+  if (!sessions.length){
+    const p = document.createElement('p');
+    p.className = 'legend';
+    p.textContent = 'No sessions for this filter yet.';
+    box.appendChild(p);
   }
 }
 
-// ── render apps ──
 function renderApps(){
   const totals = {};
-  const sessions = buildSessions(allEvents);
-  for(const s of sessions){
-    if(s.idle) continue;
-    const dur = s.end - s.start;
-    totals[s.app] = (totals[s.app]||0) + dur;
+  for (const s of buildSessions(todayEvents)){
+    if (s.idle) continue;
+    totals[s.app] = (totals[s.app] || 0) + s.dur;
   }
-  const sorted = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  const sorted = Object.entries(totals).sort((a,b) => b[1]-a[1]);
   const max = sorted[0]?.[1] || 1;
-  document.getElementById('nb-apps').textContent = sorted.length;
-  const container = document.getElementById('app-list-rows');
-  container.innerHTML = sorted.map(([app,sec])=>
+  $('nb-apps').textContent = sorted.length;
+  $('app-list').innerHTML = sorted.length ? sorted.map(([app, secs]) =>
     `<div class="app-row">
       <div class="app-name">${esc(app)}</div>
-      <div class="app-bar-track"><div class="app-bar-fill" style="width:${Math.round(sec/max*100)}%"></div></div>
-      <div class="app-time">${fmtDur(Math.round(sec))}</div>
-    </div>`
-  ).join('');
+      <div class="app-track"><div class="app-fill" style="width:${Math.max(3, Math.round(secs/max*100))}%"></div></div>
+      <div class="app-time">${fmtDur(secs)}</div>
+    </div>`).join('')
+    : '<p class="legend">Nothing to show yet.</p>';
 }
 
-// ── render heatmap ──
 function renderHeatmap(){
-  const now = Date.now()/1000;
-  const grid = {}; // "day_hour" -> count
-  for(const e of (heatEvents || allEvents)){
-    const d = new Date(e.timestamp*1000);
-    const key = d.toDateString()+'_'+d.getHours();
-    grid[key] = (grid[key]||0)+1;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const grid = {};
+  for (const e of (weekEvents.length ? weekEvents : todayEvents)){
+    const d = new Date(e.timestamp * 1000);
+    const off = Math.round((now - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+    if (off < 0 || off > 6) continue;
+    const key = off + ':' + d.getHours();
+    grid[key] = (grid[key] || 0) + 1;
   }
-  const maxCount = Math.max(...Object.values(grid), 1);
+  const max = Math.max(1, ...Object.values(grid));
 
-  const hlEl = document.getElementById('hm-hour-labels');
-  hlEl.innerHTML = Array.from({length:24},(_,h)=>
-    h%3===0?`<span>${String(h).padStart(2,'0')}</span>`:'<span></span>'
-  ).join('');
+  $('hm-hours').innerHTML = Array.from({length:24}, (_,h) =>
+    `<span>${h % 3 === 0 ? String(h).padStart(2,'0') : ''}</span>`).join('');
 
-  const hgEl = document.getElementById('heatmap-grid');
-  hgEl.innerHTML = '';
-  for(let d=6;d>=0;d--){
-    const day = new Date(now*1000 - d*86400000);
-    const label = d===0?'today':day.toLocaleDateString(undefined,{weekday:'short'});
-    const row = document.createElement('div');
-    row.className = 'heatmap-row';
-    row.innerHTML = `<div class="heatmap-label">${label}</div><div class="heatmap-cells">${
-      Array.from({length:24},(_,h)=>{
-        const key = day.toDateString()+'_'+h;
-        const cnt = grid[key]||0;
-        const lvl = cnt===0?'':cnt<maxCount*.33?'l1':cnt<maxCount*.66?'l2':'l3';
-        return `<div class="hm-cell ${lvl}" data-tip="${label} ${String(h).padStart(2,'0')}:00 — ${cnt} events"></div>`;
-      }).join('')
-    }</div>`;
-    hgEl.appendChild(row);
+  const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let out = '';
+  for (let off = 6; off >= 0; off--){
+    const date = new Date(now); date.setDate(date.getDate() - off);
+    const label = off === 0 ? 'today' : names[date.getDay()];
+    const cells = Array.from({length:24}, (_,h) => {
+      const n = grid[off + ':' + h] || 0;
+      const lvl = n === 0 ? '' : n < max*.2 ? 'l1' : n < max*.45 ? 'l2' : n < max*.75 ? 'l3' : 'l4';
+      return `<div class="hm-cell ${lvl}" data-tip="${esc(label)} ${String(h).padStart(2,'0')}:00 — ${n} events"></div>`;
+    }).join('');
+    out += `<div class="hm-row"><div class="hm-label">${label}</div><div class="hm-cells">${cells}</div></div>`;
   }
+  $('hm').innerHTML = out;
 }
 
-// ── render log ──
 function renderLog(){
-  const filtered = logFilter==='all' ? allEvents :
-    allEvents.filter(e=> logFilter==='focus'?e.kind==='window_focus':e.kind.startsWith('idle'));
-  document.getElementById('log-subtitle').textContent = filtered.length+' events';
-  const kindClass = k => k==='window_focus'?'focus':k.startsWith('idle')?'idle':'daemon';
-  document.getElementById('log-view').innerHTML =
-    [...filtered].reverse().slice(0,500).map(e=>
-      `<div class="log-line">
-        <span class="log-ts">${fmtTime(e.timestamp)}</span>
-        <span class="log-kind ${kindClass(e.kind)}">${esc(e.kind)}</span>
-        <span class="log-body">${esc([e.app_name,e.window_title].filter(Boolean).join(' — '))}</span>
-      </div>`
-    ).join('');
+  const filtered = logFilter === 'all'
+    ? todayEvents
+    : todayEvents.filter(e => logFilter === 'focus' ? e.kind === 'window_focus' : String(e.kind).startsWith('idle'));
+  $('log-sub').textContent = filtered.length + ' events';
+  $('nb-log').textContent = todayEvents.length;
+  const cls = k => k === 'window_focus' ? 'focus' : String(k).startsWith('idle') ? 'idle' : k === 'workspace_switch' ? 'switch' : 'daemon';
+  $('log').innerHTML = filtered.length ? [...filtered].reverse().slice(0,500).map(e =>
+    `<div class="log-line">
+      <span class="log-ts">${fmtTime(e.timestamp)}</span>
+      <span class="log-kind ${cls(e.kind)}">${esc(e.kind)}</span>
+      <span class="log-body">${esc([e.app_name, e.window_title].filter(Boolean).join(' — ') || e.kind)}</span>
+    </div>`).join('')
+    : '<p class="legend">No events for this filter.</p>';
 }
 
-function renderAll(){ renderTimeline(); renderApps(); renderHeatmap(); renderLog(); }
-
-// ── nav ──
-const VIEWS = ['timeline','apps','heatmap','log','notes'];
-function showSection(id, el){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('s-'+id).classList.add('active');
-  el.classList.add('active');
+/* ---------- nav ---------- */
+function showView(name, remember = true){
+  views.forEach(v => $('view-' + v).classList.toggle('active', v === name));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === name));
+  if (remember) { try { history.replaceState(null, '', '#' + name); } catch {} }
+  window.scrollTo({top:0, behavior:'smooth'});
 }
-function setFilter(f, el){
-  tlFilter = f;
-  document.querySelectorAll('#s-timeline .panel-controls .btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
+document.querySelectorAll('.nav-item').forEach(btn =>
+  btn.addEventListener('click', () => showView(btn.dataset.view)));
+
+document.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => {
+  tlFilter = btn.dataset.filter;
+  document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b === btn));
   renderTimeline();
-}
-function setLogFilter(f, el){
-  logFilter = f;
-  document.querySelectorAll('#s-log .panel-controls .btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
+}));
+document.querySelectorAll('[data-log]').forEach(btn => btn.addEventListener('click', () => {
+  logFilter = btn.dataset.log;
+  document.querySelectorAll('[data-log]').forEach(b => b.classList.toggle('active', b === btn));
   renderLog();
-}
+}));
+
 document.addEventListener('keydown', e => {
-  if(e.target.matches('textarea,input') || e.metaKey || e.ctrlKey || e.altKey) return;
-  const i = parseInt(e.key, 10) - 1;
-  if(i >= 0 && i < VIEWS.length && connected) showSection(VIEWS[i], document.querySelectorAll('.nav-item')[i]);
+  if (e.target.matches('textarea,input,select') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = Number(e.key) - 1;
+  if (i >= 0 && i < views.length && (connected || demo)) showView(views[i]);
 });
 
-// ── notes: one per day, kept in this browser ──
-(function(){
-  const ta = document.getElementById('note-text'), st = document.getElementById('note-status');
+$('demo-toggle').addEventListener('click', () => demo ? exitDemo() : enterDemo());
+$('demo-exit').addEventListener('click', exitDemo);
+$('gate-demo').addEventListener('click', enterDemo);
+
+/* ---------- notes ---------- */
+(function notes(){
+  const ta = $('note-text'), st = $('note-status');
   const key = () => 'blackboxd-note-' + new Date().toLocaleDateString('en-CA');
-  try{ ta.value = localStorage.getItem(key()) || ''; }catch(e){}
+  try { ta.value = localStorage.getItem(key()) || ''; } catch {}
   let timer;
   ta.addEventListener('input', () => {
-    st.textContent = '...'; clearTimeout(timer);
+    st.textContent = '…';
+    clearTimeout(timer);
     timer = setTimeout(() => {
-      try{ localStorage.setItem(key(), ta.value); st.textContent = 'saved in this browser'; }
-      catch(e){ st.textContent = "couldn't save, storage is blocked"; }
+      try { localStorage.setItem(key(), ta.value); st.textContent = 'saved in this browser'; }
+      catch { st.textContent = "couldn't save, storage is blocked"; }
     }, 400);
   });
 })();
 
-// ── clock ──
-setInterval(()=>{ document.getElementById('live-time').textContent = new Date().toTimeString().slice(0,8); }, 1000);
+/* ---------- clock + poll ---------- */
+function tick(){ $('live-clock').textContent = new Date().toTimeString().slice(0,8); }
+tick();
+$('hero-date').textContent = longDate(new Date());
+$('tl-date').textContent = longDate(new Date());
+setInterval(tick, 1000);
 
-// ── poll ──
 tryConnect();
-setInterval(()=>{ if(demo) return; if(connected) loadData(); else tryConnect(); }, 5000);
+const startView = location.hash.slice(1);
+if (views.includes(startView)) showView(startView, false);
+setInterval(() => {
+  if (demo || INLINE_DATA) return;
+  if (connected) loadData().catch(() => setConnected(false, null));
+  else tryConnect();
+}, 5000);
 </script>
 </body>
 </html>

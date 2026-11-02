@@ -72,7 +72,7 @@ class TextRenderer:
 
     def _day_header(self, buf: StringIO, day: TimelineDay) -> None:
         d = datetime.date.fromisoformat(day.date)
-        heading = f"  {d.strftime('%A, %B %-d %Y')}  "
+        heading = f"  {d:%A, %B} {d.day} {d.year}  "
         pad = (self.width - len(heading)) // 2
         buf.write("═" * self.width + "\n")
         buf.write(" " * pad + self._bold(heading) + "\n")

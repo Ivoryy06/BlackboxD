@@ -41,8 +41,8 @@ class GNOMECollector(BaseCollector):
         """
         Query GNOME Shell for the focused window via D-Bus eval.
 
-        Uses the `global.display.focus_window` property exposed by GNOME Shell.
-        Returns None if the shell cannot be reached or no window is focused.
+        GNOME 41+ blocks Shell.Eval for security, so on those sessions we
+        fall back to xprop when an X11 display is available.
         """
         script = (
             "let w = global.display.focus_window; "
@@ -55,7 +55,7 @@ class GNOMECollector(BaseCollector):
         )
         raw = _gdbus_eval(script)
         if raw is None or raw.strip() in ("", "null", "''"):
-            return None
+            return _x11_active_window()
 
         import json
         try:
@@ -64,7 +64,7 @@ class GNOMECollector(BaseCollector):
             data: dict[str, Any] = json.loads(cleaned)
         except (json.JSONDecodeError, ValueError) as exc:
             log.debug("GNOME: failed to parse window JSON: %s | raw=%r", exc, raw)
-            return None
+            return _x11_active_window()
 
         app_class = data.get("wm_class") or data.get("wm_class_instance")
         app_name  = _prettify(app_class)
@@ -92,14 +92,56 @@ class GNOMECollector(BaseCollector):
             args    = None,
         )
         if result is None:
-            return 0.0
+            return _x11_idle_seconds()
 
         
         match = re.search(r"\((?:uint64\s+)?(\d+),?\)", result)
         if not match:
-            return 0.0
+            return _x11_idle_seconds()
         ms = int(match.group(1))
         return ms / 1000.0
+
+
+def _x11_active_window() -> WindowInfo | None:
+    """Fallback for X11 sessions: ask the root window who is focused."""
+    if not os.environ.get("DISPLAY"):
+        return None
+    try:
+        root = subprocess.run(
+            ["xprop", "-root", "_NET_ACTIVE_WINDOW"],
+            capture_output=True, text=True, timeout=2,
+        )
+        match = re.search(r"(0x[0-9a-fA-F]+)", root.stdout)
+        if not match:
+            return None
+        wid = match.group(1)
+        props = subprocess.run(
+            ["xprop", "-id", wid, "_NET_WM_NAME", "WM_CLASS"],
+            capture_output=True, text=True, timeout=2,
+        )
+        title = re.search(r'_NET_WM_NAME\s*=\s*(?:UTF8_STRING\s*)?(.*)', props.stdout)
+        klass = re.search(r'WM_CLASS\s*=\s*"([^"]*)"', props.stdout)
+        app_class = klass.group(1) if klass else None
+        return WindowInfo(
+            app_name  = _prettify(app_class),
+            app_class = app_class,
+            title     = title.group(1).strip('"') if title else None,
+            workspace = None,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return None
+
+
+def _x11_idle_seconds() -> float:
+    if not os.environ.get("DISPLAY"):
+        return 0.0
+    try:
+        out = subprocess.run(["xprintidle"], capture_output=True, text=True, timeout=2)
+        if out.returncode == 0 and out.stdout.strip().isdigit():
+            return int(out.stdout.strip()) / 1000.0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return 0.0
 
 
 

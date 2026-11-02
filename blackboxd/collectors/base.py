@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator
 
-from blackboxd.config import CollectorConfig
+from blackboxd.config import CollectorConfig, DEFAULT_TITLE_MAX_LEN
 from blackboxd.models import Event, EventKind, RawEvent
 
 log = logging.getLogger(__name__)
@@ -121,6 +121,9 @@ class BaseCollector(ABC):
                 
                 duration = now_ts - self._idle_start_ts
                 self._idle_start_ts = None
+                # Force a fresh focus event when the user comes back, so a
+                # new session opens instead of the old one silently resuming.
+                self._last_window = None
                 yield RawEvent(
                     kind=EventKind.IDLE_END,
                     timestamp=now_ts,
@@ -178,7 +181,7 @@ class Normalizer:
         elif title and self.config.hash_titles:
             title = _sha256_short(title)
         elif title:
-            title = title[: self.config.__dict__.get("title_max_length", 120)]
+            title = title[:DEFAULT_TITLE_MAX_LEN]
 
         return Event(
             kind         = raw.kind,
