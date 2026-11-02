@@ -33,6 +33,7 @@ class HyprlandCollector(BaseCollector):
     def __init__(self, config: CollectorConfig) -> None:
         super().__init__(config)
         self._last_input_time: float = time.monotonic()
+        self._last_seen_ms: int = 0
 
     
 
@@ -88,7 +89,13 @@ class HyprlandCollector(BaseCollector):
                 ts = device.get("lastTimestamp", 0)
                 if ts and ts > latest_ms:
                     latest_ms = ts
-                    self._last_input_time = time.monotonic()
+
+        # lastTimestamp only moves when there's input. Remembering the last
+        # value we saw (instead of resetting on every poll) is what makes the
+        # idle counter actually count.
+        if latest_ms > self._last_seen_ms:
+            self._last_seen_ms = latest_ms
+            self._last_input_time = time.monotonic()
 
         elapsed = time.monotonic() - self._last_input_time
         return max(0.0, elapsed)

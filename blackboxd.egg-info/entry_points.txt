@@ -1,3 +1,0 @@
-[console_scripts]
-blackboxd = blackboxd.daemon:main
-blackboxd-report = blackboxd.cli:main

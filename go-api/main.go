@@ -11,6 +11,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -23,6 +24,7 @@ import (
 )
 
 var db *sql.DB
+var dbPath string
 
 type Event struct {
 	ID          int64    `json:"id"`
@@ -42,7 +44,21 @@ func openDB(path string) *sql.DB {
 		log.Fatalf("open db: %v", err)
 	}
 	conn.SetMaxOpenConns(1)
+	// modernc ignores some DSN options, so set the important ones explicitly.
+	conn.Exec("PRAGMA journal_mode = WAL;")
+	conn.Exec("PRAGMA busy_timeout = 5000;")
 	return conn
+}
+
+// checkSchema makes a missing database a readable error instead of a
+// mysterious 500 from every endpoint.
+func checkSchema() error {
+	var name string
+	err := db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name='events'").Scan(&name)
+	if err != nil {
+		return fmt.Errorf("events table not found in %s — start the blackboxd daemon once so it can create it", dbPath)
+	}
+	return nil
 }
 
 func queryEvents(c *gin.Context) {
@@ -128,8 +144,14 @@ func latestEvents(c *gin.Context) {
 func stats(c *gin.Context) {
 	var count int
 	var minTs, maxTs *float64
-	db.QueryRow("SELECT COUNT(*) FROM events").Scan(&count)
-	db.QueryRow("SELECT MIN(timestamp), MAX(timestamp) FROM events").Scan(&minTs, &maxTs)
+	if err := db.QueryRow("SELECT COUNT(*) FROM events").Scan(&count); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if err := db.QueryRow("SELECT MIN(timestamp), MAX(timestamp) FROM events").Scan(&minTs, &maxTs); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"total_events": count,
 		"earliest":     minTs,
@@ -137,8 +159,16 @@ func stats(c *gin.Context) {
 	})
 }
 
+func health(c *gin.Context) {
+	if err := checkSchema(); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "no schema", "db": dbPath, "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "db": dbPath})
+}
+
 func main() {
-	dbPath := os.Getenv("BLACKBOXD_DB")
+	dbPath = os.Getenv("BLACKBOXD_DB")
 	if dbPath == "" {
 		home, _ := os.UserHomeDir()
 		dbPath = home + "/.local/share/blackboxd/events.db"
@@ -150,6 +180,10 @@ func main() {
 
 	db = openDB(dbPath)
 	defer db.Close()
+
+	if err := checkSchema(); err != nil {
+		log.Printf("warning: %v", err)
+	}
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
@@ -164,12 +198,9 @@ func main() {
 	r.GET("/api/events/latest", latestEvents)
 	r.GET("/api/stats", stats)
 	r.POST("/api/refresh", func(c *gin.Context) {
-		
 		c.JSON(http.StatusOK, gin.H{"ok": true, "ts": time.Now().Unix()})
 	})
-	r.GET("/api/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok", "db": dbPath})
-	})
+	r.GET("/api/health", health)
 
 	log.Printf("blackboxd-api listening on :%s (db: %s)", port, dbPath)
 	r.Run(":" + port)

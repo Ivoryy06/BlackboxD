@@ -216,3 +216,6 @@ def _write_pid():
 
 def _clear_pid(pid_file):
     pid_file.unlink(missing_ok=True)
+
+if __name__ == "__main__":
+    main()

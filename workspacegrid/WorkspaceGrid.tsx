@@ -152,7 +152,7 @@ function ConnectionIndicator({ status }: { status: ConnectionStatus }) {
 
 // Main component
 export function WorkspaceGrid({
-  apiUrl = '[localhost](http://localhost:9099)',
+  apiUrl = 'http://localhost:8080',
   pollInterval = 500,
   onWorkspaceClick,
   className = '',
